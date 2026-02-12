@@ -1,0 +1,266 @@
+import React, { useRef } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  Pressable,
+  FlatList,
+  Platform,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Colors from "@/constants/colors";
+import { ScanResult } from "@/lib/types";
+import ScoreCircle from "./ScoreCircle";
+import IngredientTag from "./IngredientTag";
+import AlternativeCard from "./AlternativeCard";
+import BreakdownBar from "./BreakdownBar";
+
+interface ScanResultViewProps {
+  result: ScanResult;
+  onScanAgain: () => void;
+}
+
+export default function ScanResultView({
+  result,
+  onScanAgain,
+}: ScanResultViewProps) {
+  const insets = useSafeAreaInsets();
+  const redFlags = result.flags.filter((f) => f.level === "red");
+  const yellowFlags = result.flags.filter((f) => f.level === "yellow");
+  const greenFlags = result.flags.filter((f) => f.level === "green");
+
+  return (
+    <View style={styles.container}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: Platform.OS === "web" ? 67 + 16 : insets.top + 16,
+            paddingBottom: Platform.OS === "web" ? 34 + 80 : insets.bottom + 80,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.productHeader}>
+          <Text style={styles.productName}>{result.productName}</Text>
+          <Text style={styles.productBrand}>
+            {result.brand} {result.category ? `\u00B7 ${result.category}` : ""}
+          </Text>
+        </View>
+
+        <ScoreCircle score={result.score} tier={result.tier} />
+
+        <View style={styles.section}>
+          <BreakdownBar breakdown={result.breakdown} score={result.score} />
+        </View>
+
+        {redFlags.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="alert-circle" size={18} color={Colors.light.red} />
+              <Text style={[styles.sectionTitle, { color: Colors.light.red }]}>
+                Avoid ({redFlags.length})
+              </Text>
+            </View>
+            <View style={styles.tagGrid}>
+              {redFlags.map((flag, i) => (
+                <IngredientTag key={`red-${i}`} flag={flag} />
+              ))}
+            </View>
+          </View>
+        )}
+
+        {yellowFlags.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="warning" size={18} color={Colors.light.yellow} />
+              <Text style={[styles.sectionTitle, { color: "#946200" }]}>
+                Caution ({yellowFlags.length})
+              </Text>
+            </View>
+            <View style={styles.tagGrid}>
+              {yellowFlags.map((flag, i) => (
+                <IngredientTag key={`yellow-${i}`} flag={flag} />
+              ))}
+            </View>
+          </View>
+        )}
+
+        {greenFlags.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons
+                name="checkmark-circle"
+                size={18}
+                color={Colors.light.green}
+              />
+              <Text style={[styles.sectionTitle, { color: Colors.light.green }]}>
+                Positive ({greenFlags.length})
+              </Text>
+            </View>
+            <View style={styles.tagGrid}>
+              {greenFlags.map((flag, i) => (
+                <IngredientTag key={`green-${i}`} flag={flag} />
+              ))}
+            </View>
+          </View>
+        )}
+
+        {result.ingredientsRaw ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Full Ingredients</Text>
+            <View style={styles.ingredientsBox}>
+              <Text style={styles.ingredientsText}>{result.ingredientsRaw}</Text>
+            </View>
+          </View>
+        ) : null}
+
+        {result.alternatives.length > 0 && (
+          <View style={styles.altSection}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="swap-horizontal" size={18} color={Colors.light.tint} />
+              <Text style={[styles.sectionTitle, { color: Colors.light.tint }]}>
+                Better Alternatives
+              </Text>
+            </View>
+            <FlatList
+              data={result.alternatives}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(_, i) => `alt-${i}`}
+              contentContainerStyle={styles.altList}
+              renderItem={({ item }) => <AlternativeCard alternative={item} />}
+              ItemSeparatorComponent={() => <View style={{ width: 10 }} />}
+              scrollEnabled={result.alternatives.length > 0}
+            />
+          </View>
+        )}
+
+        <Text style={styles.disclaimer}>
+          Not medical advice. Scores are estimates based on publicly available data. Regulatory status varies by region.
+        </Text>
+      </ScrollView>
+
+      <View
+        style={[
+          styles.bottomBar,
+          { paddingBottom: Platform.OS === "web" ? 34 : Math.max(insets.bottom, 16) },
+        ]}
+      >
+        <Pressable
+          onPress={onScanAgain}
+          style={({ pressed }) => [
+            styles.scanAgainBtn,
+            { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] },
+          ]}
+        >
+          <Ionicons name="scan" size={20} color="#fff" />
+          <Text style={styles.scanAgainText}>Scan Another</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  content: {
+    paddingHorizontal: 20,
+    gap: 24,
+  },
+  productHeader: {
+    alignItems: "center" as const,
+    gap: 4,
+  },
+  productName: {
+    fontFamily: "DMSans_700Bold",
+    fontSize: 22,
+    color: Colors.light.text,
+    textAlign: "center" as const,
+  },
+  productBrand: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: 14,
+    color: Colors.light.textSecondary,
+  },
+  section: {
+    backgroundColor: Colors.light.card,
+    borderRadius: 14,
+    padding: 16,
+    gap: 12,
+  },
+  sectionHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+  },
+  sectionTitle: {
+    fontFamily: "DMSans_600SemiBold",
+    fontSize: 15,
+    color: Colors.light.text,
+  },
+  tagGrid: {
+    flexDirection: "row" as const,
+    flexWrap: "wrap" as const,
+    gap: 8,
+  },
+  ingredientsBox: {
+    backgroundColor: Colors.light.background,
+    borderRadius: 10,
+    padding: 12,
+  },
+  ingredientsText: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+    lineHeight: 19,
+  },
+  altSection: {
+    gap: 12,
+  },
+  altList: {
+    paddingHorizontal: 0,
+  },
+  bottomBar: {
+    position: "absolute" as const,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: Colors.light.background,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.light.borderLight,
+  },
+  scanAgainBtn: {
+    backgroundColor: Colors.light.tint,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: 8,
+    height: 52,
+    borderRadius: 14,
+  },
+  scanAgainText: {
+    fontFamily: "DMSans_600SemiBold",
+    fontSize: 16,
+    color: "#fff",
+  },
+  disclaimer: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: 11,
+    color: Colors.light.textTertiary,
+    textAlign: "center" as const,
+    lineHeight: 16,
+    paddingHorizontal: 8,
+  },
+});
