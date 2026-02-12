@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import * as Haptics from "expo-haptics";
 import Animated, {
   useAnimatedStyle,
@@ -131,11 +132,17 @@ export default function ScanScreen() {
     const pickerResult = await ImagePicker.launchCameraAsync({
       mediaTypes: ["images"],
       quality: 0.8,
-      base64: true,
     });
 
-    if (!pickerResult.canceled && pickerResult.assets[0]?.base64) {
-      analyzeImage(pickerResult.assets[0].base64);
+    if (!pickerResult.canceled && pickerResult.assets[0]?.uri) {
+      const manipulated = await ImageManipulator.manipulateAsync(
+        pickerResult.assets[0].uri,
+        [{ resize: { width: 1024 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+      );
+      if (manipulated.base64) {
+        analyzeImage(manipulated.base64);
+      }
     }
   }, [analyzeImage]);
 
@@ -147,11 +154,17 @@ export default function ScanScreen() {
     const pickerResult = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       quality: 0.8,
-      base64: true,
     });
 
-    if (!pickerResult.canceled && pickerResult.assets[0]?.base64) {
-      analyzeImage(pickerResult.assets[0].base64);
+    if (!pickerResult.canceled && pickerResult.assets[0]?.uri) {
+      const manipulated = await ImageManipulator.manipulateAsync(
+        pickerResult.assets[0].uri,
+        [{ resize: { width: 1024 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+      );
+      if (manipulated.base64) {
+        analyzeImage(manipulated.base64);
+      }
     }
   }, [analyzeImage]);
 
