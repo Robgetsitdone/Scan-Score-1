@@ -1,0 +1,461 @@
+PRD — Scan & Score (working name)
+
+One‑liner: Point your camera at a food label or barcode. We flag sketchy ingredients (red/yellow/green), score the product out of 100, and—when it makes sense—suggest a cleaner alternative. Grocery lie detector, basically.
+
+1) Goals & Non‑Goals
+
+Goals (MVP)
+
+Instant scan via photo (ingredient panel) or barcode.
+
+Ingredient highlighting on the photo: red (avoid), yellow (caution), green (good to see).
+
+Score out of 100 with clear tiers (see §9).
+
+Actionable alternatives within same category, ideally available at common retailers.
+
+Explainability: show why something was flagged and how the score happened.
+
+Non‑Goals (MVP)
+
+Meal logging, diet coaching, or macros tracking.
+
+Price comparison/shopping cart.
+
+Medical advice or personalized clinical guidance.
+
+2) Who it’s for (Personas & JTBD)
+
+The Busy Parent – “I want to know in 5 seconds if this cereal is junk.”
+
+The Fitness‑Focused Shopper – “Give me a cleaner yogurt, and don’t make me read a blog post.”
+
+The Ingredient Hawk – “If there’s titanium dioxide or BVO, I’m out.”
+
+Jobs to be Done
+
+When I’m standing in the aisle, confirm if a product is a smart choice quickly.
+
+If it’s not, suggest a better swap that’s easy to find.
+
+Learn why so I make better choices next time.
+
+3) Success Metrics (MVP)
+
+Scan‑to‑result time: ≤ 2 seconds (barcode) / ≤ 4 seconds (photo OCR) on a midrange phone.
+
+OCR ingredient accuracy: ≥ 95% token match on clear photos.
+
+Alt suggestion click‑through: ≥ 20% when the score < 80.
+
+User trust: ≥ 85% “agree/strongly agree” that explanations are clear (in‑app survey).
+
+Retention: ≥ 40% week‑4 retained users run ≥ 3 scans/week.
+
+4) User Stories (MVP)
+
+As a shopper, I can scan a barcode and get flags, a score, and alternatives.
+
+As a shopper, I can take a photo of the ingredient list and see color highlights directly on my photo where each flagged item appears.
+
+As a shopper, I can tap a flagged ingredient to see why it’s red/yellow, with citations and simple language.
+
+As a shopper, I can set preferences (e.g., avoid artificial colors) to influence flags and suggestions.
+
+As a shopper, I can view swaps within the same category with higher scores and similar price/size.
+
+5) Core Flows
+
+A. Barcode Flow
+
+Open app → Camera → Scan barcode
+
+Lookup product → Ingredient list + nutrition facts fetched
+
+Compute flags & score → Show results + alternatives
+
+Tap to expand “Why” and see references
+
+B. Photo Label Flow
+
+Open app → Camera → Take photo of ingredient panel
+
+On‑device OCR → Parse ingredients
+
+Highlight matches on photo (red/yellow/green overlays)
+
+Compute score → Show results + alternatives
+
+6) Feature Requirements
+Scan & Ingest
+
+SCAN‑1: Barcode scanning supports UPC/EAN/GTIN; offline cache for popular items.
+
+SCAN‑2: Photo capture with auto‑crop/square‑up for ingredient panels; glare warning.
+
+OCR‑1: On‑device OCR with language models (EN for MVP; extensible).
+
+PARSE‑1: Ingredient parser: tokenization, normalization (e.g., “ascorbic acid” == “vitamin C”), de‑duplication.
+
+Flagging & Highlighting
+
+FLAG‑1: Ingredient taxonomy supports Red, Yellow, Green (see §8 for criteria).
+
+FLAG‑2: Visual overlays: red/yellow/green boxes on the captured label (per token).
+
+FLAG‑3: Tap any highlighted term for a short rationale + sources.
+
+Scoring
+
+SCORE‑1: Deterministic score (0–100) using rules/weights (see §9).
+
+SCORE‑2: Show tier label and short guidance text.
+
+SCORE‑3: Provide “Explain my score” with breakdown.
+
+Alternatives
+
+ALT‑1: Suggest up to 3 same‑category alternatives with ≥10 points higher (or nearest better).
+
+ALT‑2: Respect user preferences (e.g., “no artificial sweeteners”).
+
+ALT‑3: Show quick compare (score, key flags, sugar per serving).
+
+Preferences & History
+
+PREF‑1: Optional toggles: avoid artificial colors, sweeteners, nitrites, etc.
+
+HIST‑1: Local history of last 50 scans with scores.
+
+Compliance & Trust
+
+TRUST‑1: Evidence panel: plain‑English summary + citations.
+
+TRUST‑2: “Not medical advice” and allergen disclaimer.
+
+TRUST‑3: Feedback button (“disagree with a flag?”) to improve data.
+
+7) Red / Yellow / Green — Taxonomy (MVP)
+
+Note: Final lists sourced from reputable, public references (e.g., FDA “Substances Added to Food,” recognized international bans/limits, USDA product data, Open Food Facts). The app explains that regulatory status varies by market and science evolves.
+
+Red (avoid) — examples (non‑exhaustive):
+
+Certain banned/restricted additives in relevant markets (e.g., brominated vegetable oil, potassium bromate, titanium dioxide where applicable).
+
+Partially hydrogenated oils (industrial trans fats).
+
+Nitrites/nitrates in processed meats without ascorbate/erythorbate mitigations (contextual).
+
+Artificial colors flagged by preference (user can elevate to red).
+
+Yellow (caution) — examples:
+
+Artificial sweeteners (e.g., sucralose, acesulfame K) unless user allows.
+
+Butylated hydroxyanisole/hydroxytoluene (BHA/BHT) depending on quantity/context.
+
+High added sugar relative to serving size (nutrient‑based penalty).
+
+Excess sodium versus daily value (category‑adjusted thresholds).
+
+Green (positive signals):
+
+Short ingredient list, recognizable whole foods.
+
+No artificial colors/sweeteners/preservatives.
+
+Whole grains, live cultures (yogurt), minimally processed indications.
+
+No added sugar where category‑appropriate.
+
+8) Data & Integrations (MVP)
+
+Product & nutrition facts: USDA Branded Food Products Database; Open Food Facts; GS1/retailer feeds where available.
+
+Additive/ingredient registry: FDA “Substances Added to Food” and comparable international lists; publicly documented hazard/limit notes.
+
+Category taxonomy: Simple mapping (e.g., Yogurt → Dairy → Fermented; Beef Jerky → Meat Snacks).
+
+Storage: Local cache for scan speed + cloud sync for catalog growth.
+
+Citations: Each flag references a canonical entry with a short, non‑technical summary.
+
+9) Scoring Framework (transparent & deterministic)
+
+Outputs
+
+Score: 0–100
+
+Tier labels (your requested scale):
+
+90–100: Excellent
+
+80–89.9: Good
+
+70–79.9: Don’t eat often
+
+60–69.9: Assumption: “Limit/rarely” (fills the gap you didn’t specify)
+
+50–59.9: Treat / very infrequent
+
+0–49.9: Probably avoid
+
+Formula (MVP, rule‑based)
+
+Start at 100
+– Additives penalty (max 45)
+– Nutrition penalty (max 35)
+– Processing penalty (max 10)
++ Green signals bonus (max +10, cannot exceed 100)
+= Final score (bounded 0–100)
+
+
+Additives penalty (max 45)
+
+Red additive present: −25 each, cap −45 total (top two count fully; rest discounted).
+
+Yellow additive present: −7 each, cap −21 total.
+
+If user preference flags an additive category, escalate yellow → red for that user.
+
+Nutrition penalty (max 35; category‑aware)
+
+Added sugar: −0 to −15 scaled by grams/serving vs category threshold (e.g., yogurt vs soda).
+
+Sodium: −0 to −10 scaled by %DV/serving.
+
+Sat fat: −0 to −10 scaled by %DV/serving (category adjusted).
+
+Processing penalty (max 10)
+
+NOVA‑style proxy:
+
+minimally processed: 0
+
+processed: −5
+
+ultra‑processed: −10 (based on markers like isolates, emulsifiers, flavorings list density).
+
+Green bonus (max +10)
+
+Whole food markers (+4), no added sugar (+4), short list ≤ 5 ingredients (+2).
+
+Bonus cannot overwrite red flags; cap remains 100.
+
+Explainability payload (example)
+
+{
+  "score": 72,
+  "tier": "Don’t eat often",
+  "components": {
+    "additivesPenalty": 18,
+    "nutritionPenalty": 10,
+    "processingPenalty": 5,
+    "greenBonus": 5
+  },
+  "reasons": [
+    {"type": "red", "term": "Potassium bromate", "explain": "Restricted in some markets."},
+    {"type": "yellow", "term": "Sucralose", "explain": "Artificial sweetener; user caution."},
+    {"type": "green", "term": "No added sugar", "explain": "Positive signal."}
+  ]
+}
+
+10) Alternatives Engine
+
+Inputs: product category, current score, user preferences, available catalog in same market.
+Algorithm (MVP):
+
+Find items in same leaf category.
+
+Filter by score ≥ current+10 (or top 10th percentile if catalog small).
+
+Respect preferences (e.g., exclude artificial sweeteners).
+
+Rank by score desc, then by fewer flags, then by sugar/serving asc.
+
+Return up to 3 with mini‑compare cards.
+
+Display (per alt):
+
+Product name & image, Score, “Key differences” (e.g., “No artificial colors; −8g added sugar”).
+
+“Why better” bullets drawn from the breakdown.
+
+11) UX Requirements
+
+Camera UI: large capture button, glare/blur detection, guide rectangle for ingredient panel.
+
+Highlight overlay: token‑level bounding boxes (red/yellow/green), tap for rationale.
+
+Results header: big score number + tier + 1‑line verdict.
+
+Why panel: expandable section with friendly explanations + sources.
+
+Alt row: horizontally scrollable cards.
+
+Empty state: If data missing, prompt to reshoot or submit photo for review.
+
+Tone: direct, concise, no fear‑mongering; “Here’s what we found and why.”
+
+12) Privacy & Security
+
+On‑device OCR; do not store photos by default (opt‑in for improvements).
+
+Hash barcodes in telemetry; no PII required to use.
+
+GDPR/CCPA compliant data handling.
+
+Cryptographically signed database updates; integrity checks.
+
+13) Performance & Reliability
+
+Barcode lookups ≤ 200ms (cache first; background refresh).
+
+OCR pipeline ≤ 2.5s median on device (optimize with text‑line detection; language packs).
+
+Graceful degradation offline: barcode cache + last‑known verdict; photo scans queue for later.
+
+14) Accessibility & i18n
+
+WCAG AA: large tap targets, high‑contrast overlays, dynamic type.
+
+Alt text for ingredient highlights; screen‑reader friendly explanations.
+
+Language packs for OCR/locale (EN MVP; architecture ready for ES/FR/DE).
+
+15) Admin & Quality
+
+Web console for: ingredient synonyms, taxonomy edits, dispute review, product merges.
+
+A/B config for thresholds and category rules.
+
+Regression suite with “golden” labels to verify scoring across app versions.
+
+16) Risks & Mitigations
+
+OCR misreads small fonts → glare/blur detection + re‑shoot prompt; confidence threshold.
+
+Outdated formulas/labels → show “Label last verified on <date>”; user photo reports feed updates.
+
+Region variability in regulations → show market badge; scope flags to user region.
+
+Perception of alarmism → transparent explainers + neutral language + sources.
+
+17) Release Plan (scope milestones, no dates)
+
+M0 — Foundations: barcode scan, product lookup, basic score on catalog data.
+
+M1 — Photo Highlighting: OCR + overlays + explainers.
+
+M2 — Alternatives: category mapping + ranked suggestions.
+
+M3 — Preferences & i18n: user toggles, first additional language.
+
+18) Acceptance Criteria (MVP)
+
+Flagging
+
+Given a known product with a red additive, the UI highlights the term in red on the photo and lists it in “Why.”
+
+Yellow and green terms appear with correct colors and tappable tooltips.
+
+Scoring
+
+Deterministic scores for the same input; unit tests cover boundary cases (e.g., 89.9 vs 90.0).
+
+Score explanation shows component penalties/bonuses matching the formula.
+
+Alternatives
+
+For a product scoring < 80, at least one higher‑scoring same‑category alternative is shown when catalog contains any.
+
+Alternatives respect user preferences (e.g., “no artificial sweeteners”).
+
+Performance
+
+Barcode scan to result ≤ 2s median on midrange device; OCR scan ≤ 4s median.
+
+19) Data Models (sketch)
+
+Ingredient
+
+id, canonical_name, synonyms[], hazard_level(enum: red/yellow/green/neutral),
+notes, citations[], region_overrides{}
+
+
+Product
+
+gtin, brand, name, category_id, ingredients_raw, ingredients_tokens[],
+nutrition{energy,sugar_added,sodium,sat_fat,...}, image_url, last_verified
+
+
+Verdict
+
+product_id, score, tier, flags[{term, level, rationale_id}], breakdown{...}, created_at, region
+
+20) Open Questions & Assumptions
+
+Assumption: 60–70 band labeled “Limit/rarely” to fill your gap.
+
+Do we want user health profiles (e.g., pregnancy, kid‑friendly) to influence flags at later stage?
+
+Will we restrict alternatives to widely available items (national brands) or surface local/retailer‑specific options?
+
+21) Example (walkthrough)
+
+Product: “Strawberry Yogurt, Low‑Fat”
+
+Ingredients (parsed): cultured milk, strawberries, sugar, red 40, natural flavor, pectin, vitamin D3
+
+Nutrition (per 170g): added sugar 12g, sodium 70mg, sat fat 1.5g
+
+Flags
+
+Red: Red 40 (preference‑escalated or region‑specific concern)
+
+Yellow: Natural flavor (processing marker), added sugar level (category threshold exceeded)
+
+Green: Live cultures, simple base (cultured milk), sat fat low
+
+Score (example):
+
+Start 100
+
+Additives: Red 40 (−25), Natural flavor (−7) → −32
+
+Nutrition: Added sugar (−10), sodium (−2), sat fat (−1) → −13
+
+Processing: processed (−5) → −5
+
+Green bonus: live cultures (+4), short list (+2) → +6
+
+Final: 100 − 32 − 13 − 5 + 6 = 56 → Treat / very infrequent
+
+Alternatives (same category):
+
+Plain Greek yogurt, add fresh fruit (score ~92)
+
+“No‑added‑sugar” strawberry yogurt with stevia only if user allows sweeteners (score ~85–88)
+
+Low‑sugar, live‑culture brand (score ~90)
+
+22) Tech Stack (suggested)
+
+Mobile: Native iOS/Android (camera & OCR quality) or high‑quality PWA with barcode via WebAssembly.
+
+OCR: On‑device (e.g., MLKit/Tesseract variant), line detection + lexicon for food terms.
+
+Backend: API (Node/Go), Postgres for product/ingredient graph, Redis cache, CDN for images.
+
+Search: Keyword + synonym expansion for ingredient matching.
+
+Analytics: Privacy‑safe eventing; feature flags for A/B.
+
+23) Content Guidelines
+
+Keep explanations short, neutral, and cited.
+
+Avoid absolutist language. Use “flagged due to X; here’s what it means.”
+
+Always offer a better swap if we ding a product.
