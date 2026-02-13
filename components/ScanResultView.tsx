@@ -91,28 +91,37 @@ export default function ScanResultView({
     <View style={styles.container}>
       <View
         style={[
-          styles.topActions,
+          styles.topBar,
           { top: Platform.OS === "web" ? 67 + 8 : insets.top + 8 },
         ]}
       >
         <Pressable
-          onPress={handleToggleFavorite}
+          onPress={onScanAgain}
           hitSlop={12}
-          style={styles.topIconBtn}
+          style={styles.backBtn}
         >
-          <Ionicons
-            name={isFav ? "heart" : "heart-outline"}
-            size={24}
-            color={isFav ? Colors.light.red : Colors.light.textTertiary}
-          />
+          <Ionicons name="arrow-back" size={22} color="#fff" />
         </Pressable>
-        <Pressable onPress={handleShare} hitSlop={12} style={styles.topIconBtn}>
-          <Ionicons
-            name="share-outline"
-            size={22}
-            color={Colors.light.textTertiary}
-          />
-        </Pressable>
+        <View style={styles.topActions}>
+          <Pressable
+            onPress={handleToggleFavorite}
+            hitSlop={12}
+            style={styles.topIconBtn}
+          >
+            <Ionicons
+              name={isFav ? "heart" : "heart-outline"}
+              size={24}
+              color={isFav ? Colors.light.red : Colors.light.textTertiary}
+            />
+          </Pressable>
+          <Pressable onPress={handleShare} hitSlop={12} style={styles.topIconBtn}>
+            <Ionicons
+              name="share-outline"
+              size={22}
+              color={Colors.light.textTertiary}
+            />
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
@@ -264,10 +273,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.light.background,
   },
-  topActions: {
+  topBar: {
     position: "absolute" as const,
+    left: 16,
     right: 16,
     zIndex: 10,
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.light.tint,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  topActions: {
     flexDirection: "row" as const,
     gap: 4,
   },
