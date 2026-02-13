@@ -84,7 +84,7 @@ Respond ONLY with valid JSON (no markdown, no backticks) in this exact format:
 If you cannot read the label clearly, still provide your best analysis. If the image is not a food product, return: {"error": "not_food", "message": "This doesn't appear to be a food label. Please take a clear photo of a product's ingredient list or nutrition panel."}`;
 
       const response = await openai.chat.completions.create({
-        model: "gpt-5-mini",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           {
