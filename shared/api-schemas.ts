@@ -28,6 +28,7 @@ export const ScoreBreakdownSchema = z.object({
   additivesPenalty: z.number(),
   nutritionPenalty: z.number(),
   processingPenalty: z.number(),
+  macroPenalty: z.number().min(0).max(10).default(0),
   greenBonus: z.number(),
 });
 
@@ -119,5 +120,107 @@ export function parseAnalyzeResponseSafe(data: unknown) {
   return {
     error: "analysis_failed" as const,
     message: "Invalid response format from server",
+  };
+}
+
+// ============ Nutrition Data Schemas ============
+
+export const NutritionDataSchema = z.object({
+  calories: z.number().nullable(),
+  fat: z.number().nullable(),
+  saturatedFat: z.number().nullable(),
+  carbs: z.number().nullable(),
+  sugars: z.number().nullable(),
+  protein: z.number().nullable(),
+  fiber: z.number().nullable(),
+  sodium: z.number().nullable(),
+});
+
+// ============ Comparison Schemas ============
+
+export const ChemicalCategorySchema = z.enum([
+  "preservative",
+  "artificial_coloring",
+  "chemical_additive",
+  "other",
+]);
+
+export const ChemicalExposureInfoSchema = z.object({
+  term: z.string(),
+  category: ChemicalCategorySchema,
+  healthImplication: z.string(),
+  foundIn: z.enum(["both", "product1", "product2"]),
+});
+
+export const ComparisonWinnerSchema = z.enum(["product1", "product2", "tie"]);
+
+export const CategoryComparisonSchema = z.object({
+  winner: ComparisonWinnerSchema,
+  product1Value: z.number(),
+  product2Value: z.number(),
+  explanation: z.string(),
+});
+
+export const ScanResultSchema = AnalyzeResponseSchema.extend({
+  id: z.string(),
+  scanDate: z.string(),
+  imageUri: z.string().optional(),
+  isFavorite: z.boolean().optional(),
+});
+
+export const ScanResultWithNutritionSchema = ScanResultSchema.extend({
+  nutrition: NutritionDataSchema.optional(),
+});
+
+export const ComparisonResultSchema = z.object({
+  product1: ScanResultWithNutritionSchema,
+  product2: ScanResultWithNutritionSchema,
+  winner: ComparisonWinnerSchema,
+  scoreDifference: z.number(),
+  recommendation: z.string(),
+  sharedFlags: z.array(IngredientFlagSchema),
+  uniqueToProduct1: z.array(IngredientFlagSchema),
+  uniqueToProduct2: z.array(IngredientFlagSchema),
+  chemicalExposures: z.array(ChemicalExposureInfoSchema),
+  categoryComparison: z.object({
+    additives: CategoryComparisonSchema,
+    nutrition: CategoryComparisonSchema,
+    processing: CategoryComparisonSchema,
+    macros: CategoryComparisonSchema,
+  }),
+});
+
+export const CompareProductsRequestSchema = z.object({
+  product1: ScanResultSchema,
+  product2: ScanResultSchema,
+});
+
+export const CompareErrorResponseSchema = z.object({
+  error: z.enum(["comparison_failed", "invalid_products"]),
+  message: z.string(),
+});
+
+export const CompareResultSchema = z.union([
+  ComparisonResultSchema,
+  CompareErrorResponseSchema,
+]);
+
+/**
+ * Safely parse comparison response
+ */
+export function parseComparisonResultSafe(data: unknown) {
+  const result = CompareResultSchema.safeParse(data);
+  if (result.success) {
+    return result.data;
+  }
+
+  const errorResult = CompareErrorResponseSchema.safeParse(data);
+  if (errorResult.success) {
+    return errorResult.data;
+  }
+
+  return {
+    error: "comparison_failed" as const,
+    message: "Invalid comparison response from server",
   };
 }

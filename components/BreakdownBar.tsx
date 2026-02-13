@@ -66,6 +66,14 @@ export default function BreakdownBar({ breakdown, score }: BreakdownBarProps) {
         max={10}
         color={Colors.light.scoreTreat}
       />
+      {breakdown.macroPenalty !== undefined && breakdown.macroPenalty > 0 && (
+        <BarItem
+          label="Calorie/Macro"
+          value={breakdown.macroPenalty}
+          max={10}
+          color={Colors.light.scoreLimit}
+        />
+      )}
       <BarItem
         label="Green Signals"
         value={breakdown.greenBonus}

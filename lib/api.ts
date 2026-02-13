@@ -4,12 +4,14 @@
  */
 
 import { apiRequest } from "./query-client";
-import { parseAnalyzeResponseSafe } from "@shared/api-schemas";
+import { parseAnalyzeResponseSafe, parseComparisonResultSafe } from "@shared/api-schemas";
 import type {
   AnalyzeImageRequest,
   AnalyzeBarcodeRequest,
   AnalyzeResult,
   UserPreferences,
+  ScanResult,
+  CompareResult,
 } from "@shared/api-types";
 
 /**
@@ -57,11 +59,32 @@ export async function analyzeBarcode(
 }
 
 /**
+ * Compare two products side-by-side
+ * @param product1 - First product to compare
+ * @param product2 - Second product to compare
+ * @returns Comparison result with analysis
+ */
+export async function compareProducts(
+  product1: ScanResult,
+  product2: ScanResult
+): Promise<CompareResult> {
+  const response = await apiRequest("POST", "/api/compare", {
+    product1,
+    product2,
+  });
+  const data = await response.json();
+
+  // Validate response at the boundary
+  return parseComparisonResultSafe(data);
+}
+
+/**
  * API namespace for all backend endpoints
  */
 export const api = {
   analyzeImage,
   analyzeBarcode,
+  compareProducts,
 } as const;
 
 export default api;

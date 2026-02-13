@@ -18,4 +18,19 @@ export {
   type AnalyzeResult,
   DEFAULT_PREFERENCES,
   isAnalyzeError,
+  // Nutrition types
+  type NutritionData,
+  // Comparison types
+  type ChemicalCategory,
+  type ChemicalExposureInfo,
+  type ComparisonWinner,
+  type CategoryComparison,
+  type ScanResultWithNutrition,
+  type ComparisonResult,
+  type ComparisonSelection,
+  type CompareProductsRequest,
+  type CompareProductsResponse,
+  type CompareErrorResponse,
+  type CompareResult,
+  isCompareError,
 } from "@shared/api-types";

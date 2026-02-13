@@ -20,6 +20,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: "clock", selected: "clock.fill" }} />
         <Label>History</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="compare">
+        <Icon sf={{ default: "arrow.left.arrow.right", selected: "arrow.left.arrow.right" }} />
+        <Label>Compare</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="preferences">
         <Icon sf={{ default: "slider.horizontal.3", selected: "slider.horizontal.3" }} />
         <Label>Preferences</Label>
@@ -86,6 +90,15 @@ function ClassicTabLayout() {
           title: "History",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="time-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="compare"
+        options={{
+          title: "Compare",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="git-compare-outline" size={size} color={color} />
           ),
         }}
       />

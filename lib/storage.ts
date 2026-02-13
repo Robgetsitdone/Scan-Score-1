@@ -1,8 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ScanResult, UserPreferences, DEFAULT_PREFERENCES, WeeklyStats } from "./types";
+import { ScanResult, UserPreferences, DEFAULT_PREFERENCES, WeeklyStats, ComparisonSelection } from "./types";
 
 const HISTORY_KEY = "@scanscore_history";
 const PREFS_KEY = "@scanscore_preferences";
+const COMPARISON_KEY = "@scanscore_comparison";
 const MAX_HISTORY = 50;
 
 export async function getScanHistory(): Promise<ScanResult[]> {
@@ -92,4 +93,18 @@ export async function getPreferences(): Promise<UserPreferences> {
 
 export async function savePreferences(prefs: UserPreferences): Promise<void> {
   await AsyncStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+}
+
+export async function getComparisonSelection(): Promise<ComparisonSelection> {
+  const data = await AsyncStorage.getItem(COMPARISON_KEY);
+  if (!data) return { product1: null, product2: null };
+  return JSON.parse(data) as ComparisonSelection;
+}
+
+export async function setComparisonSelection(selection: ComparisonSelection): Promise<void> {
+  await AsyncStorage.setItem(COMPARISON_KEY, JSON.stringify(selection));
+}
+
+export async function clearComparisonSelection(): Promise<void> {
+  await AsyncStorage.removeItem(COMPARISON_KEY);
 }

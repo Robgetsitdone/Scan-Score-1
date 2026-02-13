@@ -11,10 +11,11 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { ScanResult } from "@/lib/types";
-import { toggleFavorite } from "@/lib/storage";
+import { toggleFavorite, setComparisonSelection } from "@/lib/storage";
 import ScoreCircle from "./ScoreCircle";
 import IngredientTag from "./IngredientTag";
 import AlternativeCard from "./AlternativeCard";
@@ -30,7 +31,17 @@ export default function ScanResultView({
   onScanAgain,
 }: ScanResultViewProps) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [isFav, setIsFav] = useState(result.isFavorite ?? false);
+
+  const handleCompare = useCallback(async () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    // Pre-select this product for comparison
+    await setComparisonSelection({ product1: result, product2: null });
+    router.push("/compare");
+  }, [result, router]);
 
   // Performance: Memoize flag filtering to avoid recalculation on every render
   const { redFlags, yellowFlags, greenFlags } = useMemo(() => {
@@ -221,16 +232,28 @@ export default function ScanResultView({
           { paddingBottom: Platform.OS === "web" ? 34 : Math.max(insets.bottom, 16) },
         ]}
       >
-        <Pressable
-          onPress={onScanAgain}
-          style={({ pressed }) => [
-            styles.scanAgainBtn,
-            { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] },
-          ]}
-        >
-          <Ionicons name="scan" size={20} color="#fff" />
-          <Text style={styles.scanAgainText}>Scan Another</Text>
-        </Pressable>
+        <View style={styles.bottomButtons}>
+          <Pressable
+            onPress={handleCompare}
+            style={({ pressed }) => [
+              styles.compareBtn,
+              { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] },
+            ]}
+          >
+            <Ionicons name="git-compare-outline" size={20} color={Colors.light.tint} />
+            <Text style={styles.compareBtnText}>Compare</Text>
+          </Pressable>
+          <Pressable
+            onPress={onScanAgain}
+            style={({ pressed }) => [
+              styles.scanAgainBtn,
+              { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] },
+            ]}
+          >
+            <Ionicons name="scan" size={20} color="#fff" />
+            <Text style={styles.scanAgainText}>Scan Another</Text>
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -322,7 +345,29 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: Colors.light.borderLight,
   },
+  bottomButtons: {
+    flexDirection: "row" as const,
+    gap: 10,
+  },
+  compareBtn: {
+    backgroundColor: Colors.light.tintLight,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: 6,
+    height: 52,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.light.tint,
+  },
+  compareBtnText: {
+    fontFamily: "DMSans_600SemiBold",
+    fontSize: 14,
+    color: Colors.light.tint,
+  },
   scanAgainBtn: {
+    flex: 1,
     backgroundColor: Colors.light.tint,
     flexDirection: "row" as const,
     alignItems: "center" as const,
