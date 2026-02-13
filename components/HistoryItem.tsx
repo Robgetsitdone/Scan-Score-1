@@ -51,9 +51,14 @@ export default function HistoryItem({ result, onPress, onDelete }: HistoryItemPr
       </View>
 
       <View style={styles.info}>
-        <Text style={styles.name} numberOfLines={1}>
-          {result.productName}
-        </Text>
+        <View style={styles.nameRow}>
+          <Text style={styles.name} numberOfLines={1}>
+            {result.productName}
+          </Text>
+          {result.isFavorite && (
+            <Ionicons name="heart" size={14} color={Colors.light.red} />
+          )}
+        </View>
         <Text style={styles.detail} numberOfLines={1}>
           {result.brand}
           {redCount > 0 && ` \u00B7 ${redCount} red flag${redCount > 1 ? "s" : ""}`}
@@ -93,10 +98,16 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
+  nameRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+  },
   name: {
     fontFamily: "DMSans_600SemiBold",
     fontSize: 15,
     color: Colors.light.text,
+    flexShrink: 1,
   },
   detail: {
     fontFamily: "DMSans_400Regular",

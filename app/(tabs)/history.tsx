@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -8,24 +8,111 @@ import {
   Alert,
   RefreshControl,
   Platform,
-  Modal,
-  ScrollView,
 } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
-import { ScanResult } from "@/lib/types";
-import { getScanHistory, deleteScanResult, clearScanHistory } from "@/lib/storage";
+import { ScanResult, WeeklyStats } from "@/lib/types";
+import { getScanHistory, deleteScanResult, clearScanHistory, getWeeklyStats } from "@/lib/storage";
 import HistoryItem from "@/components/HistoryItem";
 import ScanResultView from "@/components/ScanResultView";
+
+function getScoreColor(score: number): string {
+  if (score >= 90) return Colors.light.scoreExcellent;
+  if (score >= 80) return Colors.light.scoreGood;
+  if (score >= 70) return Colors.light.scoreCaution;
+  if (score >= 60) return Colors.light.scoreLimit;
+  if (score >= 50) return Colors.light.scoreTreat;
+  return Colors.light.scoreAvoid;
+}
+
+function WeeklyTracker({ stats }: { stats: WeeklyStats[] }) {
+  if (stats.length === 0) return null;
+
+  const current = stats[0];
+  const previous = stats.length > 1 ? stats[1] : null;
+  const trend = previous ? current.avgScore - previous.avgScore : 0;
+  const maxBarScore = 100;
+
+  return (
+    <View style={trackerStyles.container}>
+      <View style={trackerStyles.headerRow}>
+        <View style={trackerStyles.headerLeft}>
+          <Ionicons name="analytics-outline" size={18} color={Colors.light.tint} />
+          <Text style={trackerStyles.headerTitle}>Weekly Average</Text>
+        </View>
+        {trend !== 0 && (
+          <View style={[trackerStyles.trendBadge, { backgroundColor: trend > 0 ? Colors.light.greenLight : Colors.light.redLight }]}>
+            <Ionicons
+              name={trend > 0 ? "arrow-up" : "arrow-down"}
+              size={12}
+              color={trend > 0 ? Colors.light.green : Colors.light.red}
+            />
+            <Text style={[trackerStyles.trendText, { color: trend > 0 ? Colors.light.green : Colors.light.red }]}>
+              {Math.abs(trend)} pts
+            </Text>
+          </View>
+        )}
+      </View>
+
+      <View style={trackerStyles.currentRow}>
+        <Text style={[trackerStyles.bigScore, { color: getScoreColor(current.avgScore) }]}>
+          {current.avgScore}
+        </Text>
+        <View style={trackerStyles.currentMeta}>
+          <Text style={trackerStyles.metaLabel}>This week</Text>
+          <Text style={trackerStyles.metaValue}>
+            {current.scanCount} scan{current.scanCount !== 1 ? "s" : ""}
+          </Text>
+        </View>
+      </View>
+
+      <View style={trackerStyles.barsContainer}>
+        {stats.slice(0, 6).reverse().map((week, i) => {
+          const height = Math.max(8, (week.avgScore / maxBarScore) * 60);
+          const color = getScoreColor(week.avgScore);
+          const isLast = i === stats.slice(0, 6).reverse().length - 1;
+          return (
+            <View key={week.startDate} style={trackerStyles.barCol}>
+              <View
+                style={[
+                  trackerStyles.bar,
+                  {
+                    height,
+                    backgroundColor: isLast ? color : color + "40",
+                    borderWidth: isLast ? 2 : 0,
+                    borderColor: color,
+                  },
+                ]}
+              />
+              <Text style={trackerStyles.barLabel}>
+                {new Date(week.startDate).toLocaleDateString("en-US", { month: "narrow", day: "numeric" })}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+type FilterMode = "all" | "favorites";
 
 export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
   const [history, setHistory] = useState<ScanResult[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedResult, setSelectedResult] = useState<ScanResult | null>(null);
+  const [filter, setFilter] = useState<FilterMode>("all");
+
+  const filteredHistory = useMemo(() => {
+    if (filter === "favorites") return history.filter((h) => h.isFavorite);
+    return history;
+  }, [history, filter]);
+
+  const weeklyStats = useMemo(() => getWeeklyStats(history), [history]);
 
   const loadHistory = useCallback(async () => {
     const data = await getScanHistory();
@@ -90,11 +177,16 @@ export default function HistoryScreen() {
       <View style={{ flex: 1 }}>
         <ScanResultView
           result={selectedResult}
-          onScanAgain={() => setSelectedResult(null)}
+          onScanAgain={() => {
+            setSelectedResult(null);
+            loadHistory();
+          }}
         />
       </View>
     );
   }
+
+  const favCount = history.filter((h) => h.isFavorite).length;
 
   return (
     <View style={styles.container}>
@@ -116,8 +208,50 @@ export default function HistoryScreen() {
         )}
       </View>
 
+      {history.length > 0 && (
+        <View style={styles.filterRow}>
+          <Pressable
+            onPress={() => setFilter("all")}
+            style={[
+              styles.filterChip,
+              filter === "all" && styles.filterChipActive,
+            ]}
+          >
+            <Text
+              style={[
+                styles.filterText,
+                filter === "all" && styles.filterTextActive,
+              ]}
+            >
+              All ({history.length})
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => setFilter("favorites")}
+            style={[
+              styles.filterChip,
+              filter === "favorites" && styles.filterChipActive,
+            ]}
+          >
+            <Ionicons
+              name="heart"
+              size={13}
+              color={filter === "favorites" ? "#fff" : Colors.light.red}
+            />
+            <Text
+              style={[
+                styles.filterText,
+                filter === "favorites" && styles.filterTextActive,
+              ]}
+            >
+              Favorites ({favCount})
+            </Text>
+          </Pressable>
+        </View>
+      )}
+
       <FlatList
-        data={history}
+        data={filteredHistory}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <HistoryItem
@@ -128,7 +262,7 @@ export default function HistoryScreen() {
         )}
         contentContainerStyle={[
           styles.list,
-          history.length === 0 && styles.emptyList,
+          filteredHistory.length === 0 && styles.emptyList,
           { paddingBottom: Platform.OS === "web" ? 34 + 100 : insets.bottom + 100 },
         ]}
         ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
@@ -139,19 +273,30 @@ export default function HistoryScreen() {
             tintColor={Colors.light.tint}
           />
         }
-        scrollEnabled={history.length > 0}
+        scrollEnabled={filteredHistory.length > 0}
+        ListHeaderComponent={
+          filter === "all" && weeklyStats.length > 0 ? (
+            <View style={{ marginBottom: 12 }}>
+              <WeeklyTracker stats={weeklyStats} />
+            </View>
+          ) : null
+        }
         ListEmptyComponent={
           <View style={styles.empty}>
             <View style={styles.emptyIcon}>
               <Ionicons
-                name="time-outline"
+                name={filter === "favorites" ? "heart-outline" : "time-outline"}
                 size={40}
                 color={Colors.light.textTertiary}
               />
             </View>
-            <Text style={styles.emptyTitle}>No scans yet</Text>
+            <Text style={styles.emptyTitle}>
+              {filter === "favorites" ? "No favorites yet" : "No scans yet"}
+            </Text>
             <Text style={styles.emptyText}>
-              Your scanned products will appear here. Go scan a food label to get started!
+              {filter === "favorites"
+                ? "Tap the heart icon on any scan result to save it here."
+                : "Your scanned products will appear here. Go scan a food label to get started!"}
             </Text>
           </View>
         }
@@ -159,6 +304,86 @@ export default function HistoryScreen() {
     </View>
   );
 }
+
+const trackerStyles = StyleSheet.create({
+  container: {
+    backgroundColor: Colors.light.card,
+    borderRadius: 14,
+    padding: 16,
+    gap: 14,
+  },
+  headerRow: {
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
+  },
+  headerLeft: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+  },
+  headerTitle: {
+    fontFamily: "DMSans_600SemiBold",
+    fontSize: 15,
+    color: Colors.light.text,
+  },
+  trendBadge: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  trendText: {
+    fontFamily: "DMSans_600SemiBold",
+    fontSize: 12,
+  },
+  currentRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 12,
+  },
+  bigScore: {
+    fontFamily: "DMSans_700Bold",
+    fontSize: 40,
+  },
+  currentMeta: {
+    gap: 2,
+  },
+  metaLabel: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: 13,
+    color: Colors.light.textTertiary,
+  },
+  metaValue: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: 14,
+    color: Colors.light.textSecondary,
+  },
+  barsContainer: {
+    flexDirection: "row" as const,
+    justifyContent: "space-around" as const,
+    alignItems: "flex-end" as const,
+    height: 80,
+    paddingTop: 4,
+  },
+  barCol: {
+    alignItems: "center" as const,
+    gap: 4,
+    flex: 1,
+  },
+  bar: {
+    width: 20,
+    borderRadius: 6,
+    minHeight: 8,
+  },
+  barLabel: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: 10,
+    color: Colors.light.textTertiary,
+  },
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -176,6 +401,35 @@ const styles = StyleSheet.create({
     fontFamily: "DMSans_700Bold",
     fontSize: 28,
     color: Colors.light.text,
+  },
+  filterRow: {
+    flexDirection: "row" as const,
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+  },
+  filterChip: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: Colors.light.card,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+  },
+  filterChipActive: {
+    backgroundColor: Colors.light.tint,
+    borderColor: Colors.light.tint,
+  },
+  filterText: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: 13,
+    color: Colors.light.textSecondary,
+  },
+  filterTextActive: {
+    color: "#fff",
   },
   list: {
     paddingHorizontal: 16,
