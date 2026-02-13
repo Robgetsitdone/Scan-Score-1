@@ -3,6 +3,9 @@ import { pgTable, text, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Re-export chat models for convenience
+export * from "./models/chat";
+
 export const users = pgTable("users", {
   id: varchar("id")
     .primaryKey()

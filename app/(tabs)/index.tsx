@@ -23,10 +23,9 @@ import Animated, {
 } from "react-native-reanimated";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import Colors from "@/constants/colors";
-import { ScanResult } from "@/lib/types";
-import { saveScanResult } from "@/lib/storage";
-import { getPreferences } from "@/lib/storage";
-import { apiRequest } from "@/lib/query-client";
+import { ScanResult, isAnalyzeError } from "@/lib/types";
+import { saveScanResult, getPreferences } from "@/lib/storage";
+import { api } from "@/lib/api";
 import ScanResultView from "@/components/ScanResultView";
 
 type ScanState = "idle" | "loading" | "result" | "error" | "barcode";
@@ -64,21 +63,9 @@ export default function ScanScreen() {
     startPulse();
     try {
       const prefs = await getPreferences();
-      const response = await apiRequest("POST", "/api/analyze", {
-        imageBase64: base64,
-        preferences: prefs,
-      });
+      const data = await api.analyzeImage(base64, prefs);
 
-      const data = await response.json();
-
-      if (data.error === "not_food") {
-        setErrorMsg(data.message || "This doesn't appear to be a food label.");
-        setScanState("error");
-        stopPulse();
-        return;
-      }
-
-      if (data.error) {
+      if (isAnalyzeError(data)) {
         setErrorMsg(data.message || "Analysis failed. Please try again.");
         setScanState("error");
         stopPulse();
@@ -86,21 +73,8 @@ export default function ScanScreen() {
       }
 
       const scanResult: ScanResult = {
+        ...data,
         id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        productName: data.productName || "Unknown Product",
-        brand: data.brand || "",
-        category: data.category || "",
-        score: data.score || 50,
-        tier: data.tier || "Treat / very infrequent",
-        breakdown: data.breakdown || {
-          additivesPenalty: 0,
-          nutritionPenalty: 0,
-          processingPenalty: 0,
-          greenBonus: 0,
-        },
-        flags: data.flags || [],
-        alternatives: data.alternatives || [],
-        ingredientsRaw: data.ingredientsRaw || "",
         scanDate: new Date().toISOString(),
       };
 
@@ -183,21 +157,9 @@ export default function ScanScreen() {
     startPulse();
     try {
       const prefs = await getPreferences();
-      const response = await apiRequest("POST", "/api/analyze-barcode", {
-        barcode,
-        preferences: prefs,
-      });
+      const data = await api.analyzeBarcode(barcode, prefs);
 
-      const data = await response.json();
-
-      if (data.error === "not_found") {
-        setErrorMsg(data.message || "Product not found. Try taking a photo of the label instead.");
-        setScanState("error");
-        stopPulse();
-        return;
-      }
-
-      if (data.error) {
+      if (isAnalyzeError(data)) {
         setErrorMsg(data.message || "Analysis failed. Please try again.");
         setScanState("error");
         stopPulse();
@@ -205,21 +167,8 @@ export default function ScanScreen() {
       }
 
       const scanResult: ScanResult = {
+        ...data,
         id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        productName: data.productName || "Unknown Product",
-        brand: data.brand || "",
-        category: data.category || "",
-        score: data.score || 50,
-        tier: data.tier || "Treat / very infrequent",
-        breakdown: data.breakdown || {
-          additivesPenalty: 0,
-          nutritionPenalty: 0,
-          processingPenalty: 0,
-          greenBonus: 0,
-        },
-        flags: data.flags || [],
-        alternatives: data.alternatives || [],
-        ingredientsRaw: data.ingredientsRaw || "",
         scanDate: new Date().toISOString(),
       };
 

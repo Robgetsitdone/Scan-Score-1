@@ -1,6 +1,11 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "node:http";
 import OpenAI from "openai";
+import {
+  AnalyzeImageRequestSchema,
+  AnalyzeBarcodeRequestSchema,
+} from "@shared/api-schemas";
+import type { AnalyzeResponse, AnalyzeErrorResponse } from "@shared/api-types";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -11,11 +16,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/analyze", async (req: Request, res: Response) => {
     try {
-      const { imageBase64, preferences } = req.body;
-
-      if (!imageBase64) {
-        return res.status(400).json({ error: "Image data is required" });
+      // Validate request body
+      const parseResult = AnalyzeImageRequestSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        const errorResponse: AnalyzeErrorResponse = {
+          error: "analysis_failed",
+          message: "Invalid request: " + parseResult.error.errors[0]?.message || "Image data is required",
+        };
+        return res.status(400).json(errorResponse);
       }
+
+      const { imageBase64, preferences } = parseResult.data;
 
       const prefsText = preferences
         ? Object.entries(preferences)
@@ -127,11 +138,17 @@ If you cannot read the label clearly, still provide your best analysis. If the i
 
   app.post("/api/analyze-barcode", async (req: Request, res: Response) => {
     try {
-      const { barcode, preferences } = req.body;
-
-      if (!barcode) {
-        return res.status(400).json({ error: "barcode_required", message: "Barcode is required" });
+      // Validate request body
+      const parseResult = AnalyzeBarcodeRequestSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        const errorResponse: AnalyzeErrorResponse = {
+          error: "analysis_failed",
+          message: "Invalid request: " + parseResult.error.errors[0]?.message || "Barcode is required",
+        };
+        return res.status(400).json(errorResponse);
       }
+
+      const { barcode, preferences } = parseResult.data;
 
       const offResponse = await fetch(`https://world.openfoodfacts.org/api/v2/product/${barcode}.json`);
       const offData = await offResponse.json();
