@@ -69,17 +69,16 @@ function setupCors(app: express.Application) {
 }
 
 function setupBodyParsing(app: express.Application) {
-  // Performance: Reduced from 25MB to 5MB to prevent memory exhaustion
   app.use(
     express.json({
-      limit: "5mb",
+      limit: "25mb",
       verify: (req, _res, buf) => {
         req.rawBody = buf;
       },
     }),
   );
 
-  app.use(express.urlencoded({ extended: false, limit: "5mb" }));
+  app.use(express.urlencoded({ extended: false, limit: "25mb" }));
 }
 
 function setupRateLimiting(app: express.Application) {

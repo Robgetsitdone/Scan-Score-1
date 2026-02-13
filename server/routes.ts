@@ -174,17 +174,17 @@ If you cannot read the label clearly, still provide your best analysis. If the i
                 type: "image_url",
                 image_url: {
                   url: `data:image/jpeg;base64,${imageBase64}`,
-                  detail: "high",
+                  detail: "low",
                 },
               },
               {
                 type: "text",
-                text: "Analyze this food label. Read all ingredients, flag them, score the product, and suggest alternatives.",
+                text: "Analyze this food label.",
               },
             ],
           },
         ],
-        max_completion_tokens: 4096,
+        max_completion_tokens: 2048,
       });
 
       const content = response.choices[0]?.message?.content || "";
@@ -279,10 +279,10 @@ ${RESPONSE_FORMAT}`;
           { role: "system", content: systemPrompt },
           {
             role: "user",
-            content: `Analyze this food product:\n\nProduct: ${productName}\nBrand: ${brand}\nCategory: ${category}\n\nIngredients: ${ingredientsText}${nutritionContext}`,
+            content: `Product: ${productName}\nBrand: ${brand}\nCategory: ${category}\nIngredients: ${ingredientsText}${nutritionContext}`,
           },
         ],
-        max_completion_tokens: 4096,
+        max_completion_tokens: 2048,
       });
 
       const content = response.choices[0]?.message?.content || "";

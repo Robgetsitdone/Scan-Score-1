@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  Image,
+  ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -20,6 +22,7 @@ import Animated, {
   withTiming,
   withSequence,
   Easing,
+  FadeIn,
 } from "react-native-reanimated";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import Colors from "@/constants/colors";
@@ -38,6 +41,19 @@ export default function ScanScreen() {
   const pulseAnim = useSharedValue(1);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const barcodeScannedRef = useRef(false);
+  const [loadingStep, setLoadingStep] = useState(0);
+
+  useEffect(() => {
+    if (scanState !== "loading") {
+      setLoadingStep(0);
+      return;
+    }
+    const steps = [1500, 3500, 6000];
+    const timers = steps.map((ms, i) =>
+      setTimeout(() => setLoadingStep(i + 1), ms)
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [scanState]);
 
   const startPulse = useCallback(() => {
     pulseAnim.value = withRepeat(
@@ -276,20 +292,55 @@ export default function ScanScreen() {
         ]}
       >
         {scanState === "idle" && (
-          <>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.idleScroll}
+          >
             <View style={styles.hero}>
-              <View style={styles.iconCircle}>
-                <MaterialCommunityIcons
-                  name="barcode-scan"
-                  size={36}
-                  color={Colors.light.tint}
-                />
-              </View>
-              <Text style={styles.heroTitle}>Scan a Food Label</Text>
-              <Text style={styles.heroSubtitle}>
-                Take a photo of any ingredient list or nutrition panel. We'll flag
-                what matters and score it instantly.
+              <Image
+                source={require("@/assets/images/icon.png")}
+                style={styles.logoImage}
+              />
+              <Text style={styles.heroTitle}>Scan & Score</Text>
+              <Text style={styles.heroTagline}>
+                Know what's really in your food.
               </Text>
+            </View>
+
+            <View style={styles.valueProps}>
+              <View style={styles.valuePropRow}>
+                <View style={[styles.valuePropIcon, { backgroundColor: Colors.light.redLight }]}>
+                  <Ionicons name="warning" size={16} color={Colors.light.red} />
+                </View>
+                <View style={styles.valuePropText}>
+                  <Text style={styles.valuePropTitle}>Detect hidden chemicals</Text>
+                  <Text style={styles.valuePropDesc}>
+                    Red-flag harmful additives like Red 40, BHA, and titanium dioxide before they reach your plate.
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.valuePropRow}>
+                <View style={[styles.valuePropIcon, { backgroundColor: Colors.light.yellowLight }]}>
+                  <Ionicons name="flask" size={16} color={Colors.light.yellow} />
+                </View>
+                <View style={styles.valuePropText}>
+                  <Text style={styles.valuePropTitle}>Expose ultra-processed ingredients</Text>
+                  <Text style={styles.valuePropDesc}>
+                    Spot artificial sweeteners, high fructose corn syrup, and preservatives that don't belong in real food.
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.valuePropRow}>
+                <View style={[styles.valuePropIcon, { backgroundColor: Colors.light.greenLight }]}>
+                  <Ionicons name="leaf" size={16} color={Colors.light.green} />
+                </View>
+                <View style={styles.valuePropText}>
+                  <Text style={styles.valuePropTitle}>Find cleaner alternatives</Text>
+                  <Text style={styles.valuePropDesc}>
+                    Get instant suggestions for healthier swaps with fewer chemicals and better scores.
+                  </Text>
+                </View>
+              </View>
             </View>
 
             <View style={styles.actions}>
@@ -307,58 +358,54 @@ export default function ScanScreen() {
                 <Text style={styles.primaryBtnText}>Take Photo</Text>
               </Pressable>
 
-              <Pressable
-                onPress={pickFromGallery}
-                style={({ pressed }) => [
-                  styles.secondaryBtn,
-                  {
-                    opacity: pressed ? 0.9 : 1,
-                    transform: [{ scale: pressed ? 0.97 : 1 }],
-                  },
-                ]}
-              >
-                <Ionicons name="images" size={20} color={Colors.light.tint} />
-                <Text style={styles.secondaryBtnText}>Choose from Gallery</Text>
-              </Pressable>
+              <View style={styles.actionRow}>
+                <Pressable
+                  onPress={pickFromGallery}
+                  style={({ pressed }) => [
+                    styles.secondaryBtn,
+                    styles.actionHalf,
+                    {
+                      opacity: pressed ? 0.9 : 1,
+                      transform: [{ scale: pressed ? 0.97 : 1 }],
+                    },
+                  ]}
+                >
+                  <Ionicons name="images" size={20} color={Colors.light.tint} />
+                  <Text style={styles.secondaryBtnText}>Gallery</Text>
+                </Pressable>
 
-              <Pressable
-                onPress={openBarcodeScanner}
-                style={({ pressed }) => [
-                  styles.secondaryBtn,
-                  {
-                    opacity: pressed ? 0.9 : 1,
-                    transform: [{ scale: pressed ? 0.97 : 1 }],
-                  },
-                ]}
-              >
-                <MaterialCommunityIcons name="barcode-scan" size={20} color={Colors.light.tint} />
-                <Text style={styles.secondaryBtnText}>Scan Barcode</Text>
-              </Pressable>
+                <Pressable
+                  onPress={openBarcodeScanner}
+                  style={({ pressed }) => [
+                    styles.secondaryBtn,
+                    styles.actionHalf,
+                    {
+                      opacity: pressed ? 0.9 : 1,
+                      transform: [{ scale: pressed ? 0.97 : 1 }],
+                    },
+                  ]}
+                >
+                  <MaterialCommunityIcons name="barcode-scan" size={20} color={Colors.light.tint} />
+                  <Text style={styles.secondaryBtnText}>Barcode</Text>
+                </Pressable>
+              </View>
             </View>
 
             <View style={styles.tips}>
               <View style={styles.tipRow}>
-                <Ionicons
-                  name="bulb-outline"
-                  size={16}
-                  color={Colors.light.textTertiary}
-                />
+                <Ionicons name="bulb-outline" size={16} color={Colors.light.textTertiary} />
                 <Text style={styles.tipText}>
                   Make sure the ingredient list is clearly readable
                 </Text>
               </View>
               <View style={styles.tipRow}>
-                <Ionicons
-                  name="flashlight-outline"
-                  size={16}
-                  color={Colors.light.textTertiary}
-                />
+                <Ionicons name="flashlight-outline" size={16} color={Colors.light.textTertiary} />
                 <Text style={styles.tipText}>
                   Avoid glare and ensure good lighting
                 </Text>
               </View>
             </View>
-          </>
+          </ScrollView>
         )}
 
         {scanState === "loading" && (
@@ -371,14 +418,59 @@ export default function ScanScreen() {
               />
             </Animated.View>
             <Text style={styles.loadingTitle}>Analyzing your label...</Text>
-            <Text style={styles.loadingSubtitle}>
-              Reading ingredients, checking additives, calculating score
-            </Text>
-            <ActivityIndicator
-              size="small"
-              color={Colors.light.tint}
-              style={{ marginTop: 16 }}
-            />
+
+            <View style={styles.loadingSteps}>
+              {[
+                { icon: "eye-outline" as const, text: "Reading ingredients" },
+                { icon: "flask-outline" as const, text: "Checking for chemicals & additives" },
+                { icon: "calculator-outline" as const, text: "Calculating health score" },
+              ].map((step, i) => (
+                <Animated.View
+                  key={step.text}
+                  entering={FadeIn.delay(i * 1500).duration(400)}
+                  style={[
+                    styles.stepRow,
+                    {
+                      opacity: loadingStep >= i ? 1 : 0.3,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name={loadingStep > i ? "checkmark-circle" : step.icon}
+                    size={18}
+                    color={
+                      loadingStep > i
+                        ? Colors.light.green
+                        : loadingStep === i
+                        ? Colors.light.tint
+                        : Colors.light.textTertiary
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.stepText,
+                      {
+                        color:
+                          loadingStep > i
+                            ? Colors.light.green
+                            : loadingStep === i
+                            ? Colors.light.text
+                            : Colors.light.textTertiary,
+                      },
+                    ]}
+                  >
+                    {step.text}
+                  </Text>
+                  {loadingStep === i && (
+                    <ActivityIndicator
+                      size="small"
+                      color={Colors.light.tint}
+                      style={{ marginLeft: 4 }}
+                    />
+                  )}
+                </Animated.View>
+              ))}
+            </View>
           </View>
         )}
 
@@ -420,37 +512,77 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     justifyContent: "center" as const,
   },
+  idleScroll: {
+    flexGrow: 1,
+    justifyContent: "center" as const,
+    paddingBottom: 20,
+  },
   hero: {
     alignItems: "center" as const,
-    gap: 12,
-    marginBottom: 40,
+    gap: 6,
+    marginBottom: 24,
   },
-  iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: Colors.light.tintLight,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-    marginBottom: 4,
+  logoImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 18,
+    marginBottom: 6,
   },
   heroTitle: {
     fontFamily: "DMSans_700Bold",
-    fontSize: 26,
+    fontSize: 28,
     color: Colors.light.text,
     textAlign: "center" as const,
   },
-  heroSubtitle: {
-    fontFamily: "DMSans_400Regular",
+  heroTagline: {
+    fontFamily: "DMSans_500Medium",
     fontSize: 15,
     color: Colors.light.textSecondary,
     textAlign: "center" as const,
-    lineHeight: 22,
-    paddingHorizontal: 16,
+  },
+  valueProps: {
+    gap: 14,
+    marginBottom: 28,
+    paddingHorizontal: 4,
+  },
+  valuePropRow: {
+    flexDirection: "row" as const,
+    gap: 12,
+    alignItems: "flex-start" as const,
+  },
+  valuePropIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    marginTop: 2,
+  },
+  valuePropText: {
+    flex: 1,
+    gap: 2,
+  },
+  valuePropTitle: {
+    fontFamily: "DMSans_600SemiBold",
+    fontSize: 14,
+    color: Colors.light.text,
+  },
+  valuePropDesc: {
+    fontFamily: "DMSans_400Regular",
+    fontSize: 12.5,
+    color: Colors.light.textSecondary,
+    lineHeight: 18,
   },
   actions: {
-    gap: 12,
-    marginBottom: 32,
+    gap: 10,
+    marginBottom: 24,
+  },
+  actionRow: {
+    flexDirection: "row" as const,
+    gap: 10,
+  },
+  actionHalf: {
+    flex: 1,
   },
   primaryBtn: {
     backgroundColor: Colors.light.tint,
@@ -471,7 +603,7 @@ const styles = StyleSheet.create({
     flexDirection: "row" as const,
     alignItems: "center" as const,
     justifyContent: "center" as const,
-    gap: 10,
+    gap: 8,
     height: 52,
     borderRadius: 14,
     borderWidth: 1,
@@ -479,7 +611,7 @@ const styles = StyleSheet.create({
   },
   secondaryBtnText: {
     fontFamily: "DMSans_500Medium",
-    fontSize: 15,
+    fontSize: 14,
     color: Colors.light.tint,
   },
   tips: {
@@ -498,7 +630,7 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     alignItems: "center" as const,
-    gap: 12,
+    gap: 16,
   },
   loadingCircle: {
     width: 96,
@@ -507,19 +639,28 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.light.tintLight,
     alignItems: "center" as const,
     justifyContent: "center" as const,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   loadingTitle: {
     fontFamily: "DMSans_700Bold",
     fontSize: 20,
     color: Colors.light.text,
   },
-  loadingSubtitle: {
-    fontFamily: "DMSans_400Regular",
+  loadingSteps: {
+    gap: 14,
+    marginTop: 8,
+    alignSelf: "stretch" as const,
+    paddingHorizontal: 20,
+  },
+  stepRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 10,
+  },
+  stepText: {
+    fontFamily: "DMSans_500Medium",
     fontSize: 14,
-    color: Colors.light.textSecondary,
-    textAlign: "center" as const,
-    lineHeight: 20,
+    flex: 1,
   },
   errorContainer: {
     alignItems: "center" as const,
