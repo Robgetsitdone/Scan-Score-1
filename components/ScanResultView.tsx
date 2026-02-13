@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,11 +7,14 @@ import {
   Pressable,
   FlatList,
   Platform,
+  Share,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { ScanResult } from "@/lib/types";
+import { toggleFavorite } from "@/lib/storage";
 import ScoreCircle from "./ScoreCircle";
 import IngredientTag from "./IngredientTag";
 import AlternativeCard from "./AlternativeCard";
@@ -27,12 +30,70 @@ export default function ScanResultView({
   onScanAgain,
 }: ScanResultViewProps) {
   const insets = useSafeAreaInsets();
+  const [isFav, setIsFav] = useState(result.isFavorite ?? false);
   const redFlags = result.flags.filter((f) => f.level === "red");
   const yellowFlags = result.flags.filter((f) => f.level === "yellow");
   const greenFlags = result.flags.filter((f) => f.level === "green");
 
+  const handleToggleFavorite = useCallback(async () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    const newState = await toggleFavorite(result.id);
+    setIsFav(newState);
+    result.isFavorite = newState;
+  }, [result.id]);
+
+  const handleShare = useCallback(async () => {
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+
+    const redList = redFlags.map((f) => f.term).join(", ");
+    const yellowList = yellowFlags.map((f) => f.term).join(", ");
+    const greenList = greenFlags.map((f) => f.term).join(", ");
+
+    let message = `${result.productName}`;
+    if (result.brand) message += ` by ${result.brand}`;
+    message += `\nScore: ${result.score}/100 (${result.tier})`;
+    if (redList) message += `\nAvoid: ${redList}`;
+    if (yellowList) message += `\nCaution: ${yellowList}`;
+    if (greenList) message += `\nPositive: ${greenList}`;
+    message += `\n\nScanned with Scan & Score`;
+
+    try {
+      await Share.share({ message });
+    } catch (_) {}
+  }, [result, redFlags, yellowFlags, greenFlags]);
+
   return (
     <View style={styles.container}>
+      <View
+        style={[
+          styles.topActions,
+          { top: Platform.OS === "web" ? 67 + 8 : insets.top + 8 },
+        ]}
+      >
+        <Pressable
+          onPress={handleToggleFavorite}
+          hitSlop={12}
+          style={styles.topIconBtn}
+        >
+          <Ionicons
+            name={isFav ? "heart" : "heart-outline"}
+            size={24}
+            color={isFav ? Colors.light.red : Colors.light.textTertiary}
+          />
+        </Pressable>
+        <Pressable onPress={handleShare} hitSlop={12} style={styles.topIconBtn}>
+          <Ionicons
+            name="share-outline"
+            size={22}
+            color={Colors.light.textTertiary}
+          />
+        </Pressable>
+      </View>
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[
@@ -169,6 +230,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  topActions: {
+    position: "absolute" as const,
+    right: 16,
+    zIndex: 10,
+    flexDirection: "row" as const,
+    gap: 4,
+  },
+  topIconBtn: {
+    padding: 8,
   },
   scrollView: {
     flex: 1,

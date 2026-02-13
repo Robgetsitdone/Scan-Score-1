@@ -43,6 +43,15 @@ export interface ScanResult {
   ingredientsRaw: string;
   scanDate: string;
   imageUri?: string;
+  isFavorite?: boolean;
+}
+
+export interface WeeklyStats {
+  weekLabel: string;
+  avgScore: number;
+  scanCount: number;
+  startDate: string;
+  endDate: string;
 }
 
 export interface UserPreferences {
