@@ -1,11 +1,15 @@
 import express from "express";
 import type { Request, Response, NextFunction } from "express";
+import rateLimit from "express-rate-limit";
 import { registerRoutes } from "./routes";
 import * as fs from "fs";
 import * as path from "path";
 
 const app = express();
 const log = console.log;
+
+// Security: Allowed localhost ports for development
+const ALLOWED_LOCALHOST_PORTS = new Set(["5000", "8081", "19000", "19001", "19006"]);
 
 declare module "http" {
   interface IncomingMessage {
@@ -22,19 +26,26 @@ function setupCors(app: express.Application) {
     }
 
     if (process.env.REPLIT_DOMAINS) {
-      process.env.REPLIT_DOMAINS.split(",").forEach((d) => {
+      process.env.REPLIT_DOMAINS.split(",").forEach((d: string) => {
         origins.add(`https://${d.trim()}`);
       });
     }
 
     const origin = req.header("origin");
 
-    // Allow localhost origins for Expo web development (any port)
-    const isLocalhost =
-      origin?.startsWith("http://localhost:") ||
-      origin?.startsWith("http://127.0.0.1:");
+    // Security: Only allow specific localhost ports, not any port
+    let isAllowedLocalhost = false;
+    if (origin) {
+      try {
+        const url = new URL(origin);
+        const isLocalhost = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+        isAllowedLocalhost = isLocalhost && ALLOWED_LOCALHOST_PORTS.has(url.port);
+      } catch {
+        // Invalid URL, not allowed
+      }
+    }
 
-    if (origin && (origins.has(origin) || isLocalhost)) {
+    if (origin && (origins.has(origin) || isAllowedLocalhost)) {
       res.header("Access-Control-Allow-Origin", origin);
       res.header(
         "Access-Control-Allow-Methods",
@@ -43,6 +54,11 @@ function setupCors(app: express.Application) {
       res.header("Access-Control-Allow-Headers", "Content-Type");
       res.header("Access-Control-Allow-Credentials", "true");
     }
+
+    // Security: Add security headers
+    res.header("X-Content-Type-Options", "nosniff");
+    res.header("X-Frame-Options", "DENY");
+    res.header("X-XSS-Protection", "1; mode=block");
 
     if (req.method === "OPTIONS") {
       return res.sendStatus(200);
@@ -53,45 +69,54 @@ function setupCors(app: express.Application) {
 }
 
 function setupBodyParsing(app: express.Application) {
+  // Performance: Reduced from 25MB to 5MB to prevent memory exhaustion
   app.use(
     express.json({
-      limit: "25mb",
+      limit: "5mb",
       verify: (req, _res, buf) => {
         req.rawBody = buf;
       },
     }),
   );
 
-  app.use(express.urlencoded({ extended: false, limit: "25mb" }));
+  app.use(express.urlencoded({ extended: false, limit: "5mb" }));
+}
+
+function setupRateLimiting(app: express.Application) {
+  // Rate limit for analysis endpoints (expensive OpenAI calls)
+  const analysisLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 10, // 10 requests per minute
+    message: { error: "rate_limited", message: "Too many requests. Please try again later." },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // Rate limit for general API endpoints
+  const generalLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: 60, // 60 requests per minute
+    message: { error: "rate_limited", message: "Too many requests. Please try again later." },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  app.use("/api/analyze", analysisLimiter);
+  app.use("/api/analyze-barcode", analysisLimiter);
+  app.use("/api/conversations", generalLimiter);
 }
 
 function setupRequestLogging(app: express.Application) {
   app.use((req, res, next) => {
     const start = Date.now();
-    const path = req.path;
-    let capturedJsonResponse: Record<string, unknown> | undefined = undefined;
-
-    const originalResJson = res.json;
-    res.json = function (bodyJson, ...args) {
-      capturedJsonResponse = bodyJson;
-      return originalResJson.apply(res, [bodyJson, ...args]);
-    };
+    const reqPath = req.path;
 
     res.on("finish", () => {
-      if (!path.startsWith("/api")) return;
+      if (!reqPath.startsWith("/api")) return;
 
       const duration = Date.now() - start;
-
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
+      // Performance: Don't log response bodies - just method, path, status, duration
+      log(`${req.method} ${reqPath} ${res.statusCode} in ${duration}ms`);
     });
 
     next();
@@ -143,7 +168,10 @@ function serveLandingPage({
   appName: string;
 }) {
   const forwardedProto = req.header("x-forwarded-proto");
-  const protocol = forwardedProto || req.protocol || "https";
+  // Security: Default to HTTPS, only trust proxy headers in production
+  const protocol = process.env.NODE_ENV === "production"
+    ? "https"
+    : (forwardedProto || req.protocol || "https");
   const forwardedHost = req.header("x-forwarded-host");
   const host = forwardedHost || req.get("host");
   const baseUrl = `${protocol}://${host}`;
@@ -158,6 +186,10 @@ function serveLandingPage({
     .replace(/APP_NAME_PLACEHOLDER/g, appName);
 
   res.setHeader("Content-Type", "text/html; charset=utf-8");
+  // Security: Add HSTS header in production
+  if (process.env.NODE_ENV === "production") {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
   res.status(200).send(html);
 }
 
@@ -216,7 +248,8 @@ function setupErrorHandler(app: express.Application) {
     const status = error.status || error.statusCode || 500;
     const message = error.message || "Internal Server Error";
 
-    console.error("Internal Server Error:", err);
+    // Security: Log only error message, not full object (could contain secrets)
+    console.error("Server error:", status, message);
 
     if (res.headersSent) {
       return next(err);
@@ -229,6 +262,7 @@ function setupErrorHandler(app: express.Application) {
 (async () => {
   setupCors(app);
   setupBodyParsing(app);
+  setupRateLimiting(app);
   setupRequestLogging(app);
 
   configureExpoAndLanding(app);

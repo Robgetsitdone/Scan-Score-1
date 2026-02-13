@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, memo } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
@@ -33,10 +33,19 @@ interface HistoryItemProps {
   onDelete: () => void;
 }
 
-export default function HistoryItem({ result, onPress, onDelete }: HistoryItemProps) {
+function HistoryItem({ result, onPress, onDelete }: HistoryItemProps) {
   const scoreColor = getScoreColor(result.score);
-  const redCount = result.flags.filter((f) => f.level === "red").length;
-  const yellowCount = result.flags.filter((f) => f.level === "yellow").length;
+
+  // Performance: Memoize flag counts to avoid recalculation on every render
+  const { redCount, yellowCount } = useMemo(() => {
+    let red = 0;
+    let yellow = 0;
+    for (const flag of result.flags) {
+      if (flag.level === "red") red++;
+      else if (flag.level === "yellow") yellow++;
+    }
+    return { redCount: red, yellowCount: yellow };
+  }, [result.flags]);
 
   return (
     <Pressable
@@ -73,6 +82,18 @@ export default function HistoryItem({ result, onPress, onDelete }: HistoryItemPr
     </Pressable>
   );
 }
+
+// Performance: Wrap with React.memo to prevent unnecessary re-renders
+export default memo(HistoryItem, (prevProps, nextProps) => {
+  // Only re-render if result data or callbacks change
+  return (
+    prevProps.result.id === nextProps.result.id &&
+    prevProps.result.isFavorite === nextProps.result.isFavorite &&
+    prevProps.result.score === nextProps.result.score &&
+    prevProps.onPress === nextProps.onPress &&
+    prevProps.onDelete === nextProps.onDelete
+  );
+});
 
 const styles = StyleSheet.create({
   container: {

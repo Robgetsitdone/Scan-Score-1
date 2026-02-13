@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -31,9 +31,19 @@ export default function ScanResultView({
 }: ScanResultViewProps) {
   const insets = useSafeAreaInsets();
   const [isFav, setIsFav] = useState(result.isFavorite ?? false);
-  const redFlags = result.flags.filter((f) => f.level === "red");
-  const yellowFlags = result.flags.filter((f) => f.level === "yellow");
-  const greenFlags = result.flags.filter((f) => f.level === "green");
+
+  // Performance: Memoize flag filtering to avoid recalculation on every render
+  const { redFlags, yellowFlags, greenFlags } = useMemo(() => {
+    const red: typeof result.flags = [];
+    const yellow: typeof result.flags = [];
+    const green: typeof result.flags = [];
+    for (const flag of result.flags) {
+      if (flag.level === "red") red.push(flag);
+      else if (flag.level === "yellow") yellow.push(flag);
+      else if (flag.level === "green") green.push(flag);
+    }
+    return { redFlags: red, yellowFlags: yellow, greenFlags: green };
+  }, [result.flags]);
 
   const handleToggleFavorite = useCallback(async () => {
     if (Platform.OS !== "web") {

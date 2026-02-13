@@ -5,12 +5,47 @@ import {
   AnalyzeImageRequestSchema,
   AnalyzeBarcodeRequestSchema,
 } from "@shared/api-schemas";
-import type { AnalyzeResponse, AnalyzeErrorResponse } from "@shared/api-types";
+import type { AnalyzeErrorResponse } from "@shared/api-types";
 
+// Performance: Configure OpenAI client with timeout
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
   baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+  timeout: 60000, // 60 second timeout
+  maxRetries: 2,
 });
+
+// Security: Barcode format validation (EAN-13, EAN-8, UPC-A, UPC-E)
+const BARCODE_REGEX = /^[0-9]{8,14}$/;
+
+function isValidBarcode(barcode: string): boolean {
+  return BARCODE_REGEX.test(barcode);
+}
+
+// Security: Sanitize error for logging (remove potential secrets)
+function sanitizeError(error: unknown): string {
+  if (error instanceof Error) {
+    // Don't log full stack traces that might contain sensitive info
+    return error.message;
+  }
+  if (typeof error === "string") {
+    return error;
+  }
+  return "Unknown error";
+}
+
+// Performance: Fetch with timeout using AbortController
+async function fetchWithTimeout(url: string, timeoutMs: number = 30000): Promise<globalThis.Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    return response;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -21,7 +56,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!parseResult.success) {
         const errorResponse: AnalyzeErrorResponse = {
           error: "analysis_failed",
-          message: "Invalid request: " + parseResult.error.errors[0]?.message || "Image data is required",
+          message: "Invalid request: " + (parseResult.error.errors[0]?.message || "Image data is required"),
         };
         return res.status(400).json(errorResponse);
       }
@@ -127,11 +162,12 @@ If you cannot read the label clearly, still provide your best analysis. If the i
 
       const result = JSON.parse(cleaned);
       res.json(result);
-    } catch (error: any) {
-      console.error("Error analyzing image:", error);
+    } catch (error: unknown) {
+      // Security: Log sanitized error message only
+      console.error("Error analyzing image:", sanitizeError(error));
       res.status(500).json({
         error: "analysis_failed",
-        message: error.message || "Failed to analyze the food label. Please try again.",
+        message: "Failed to analyze the food label. Please try again.",
       });
     }
   });
@@ -143,14 +179,26 @@ If you cannot read the label clearly, still provide your best analysis. If the i
       if (!parseResult.success) {
         const errorResponse: AnalyzeErrorResponse = {
           error: "analysis_failed",
-          message: "Invalid request: " + parseResult.error.errors[0]?.message || "Barcode is required",
+          message: "Invalid request: " + (parseResult.error.errors[0]?.message || "Barcode is required"),
         };
         return res.status(400).json(errorResponse);
       }
 
       const { barcode, preferences } = parseResult.data;
 
-      const offResponse = await fetch(`https://world.openfoodfacts.org/api/v2/product/${barcode}.json`);
+      // Security: Validate barcode format to prevent SSRF
+      if (!isValidBarcode(barcode)) {
+        return res.status(400).json({
+          error: "analysis_failed",
+          message: "Invalid barcode format. Please scan a valid product barcode.",
+        });
+      }
+
+      // Performance: Use fetch with timeout
+      const offResponse = await fetchWithTimeout(
+        `https://world.openfoodfacts.org/api/v2/product/${barcode}.json`,
+        30000
+      );
       const offData = await offResponse.json();
 
       if (offData.status !== 1 || !offData.product) {
@@ -257,11 +305,12 @@ Respond ONLY with valid JSON (no markdown, no backticks) in this exact format:
       result.ingredientsRaw = result.ingredientsRaw || ingredientsText;
 
       res.json(result);
-    } catch (error: any) {
-      console.error("Error analyzing barcode:", error);
+    } catch (error: unknown) {
+      // Security: Log sanitized error message only
+      console.error("Error analyzing barcode:", sanitizeError(error));
       res.status(500).json({
         error: "analysis_failed",
-        message: error.message || "Failed to analyze the product. Please try again.",
+        message: "Failed to analyze the product. Please try again.",
       });
     }
   });

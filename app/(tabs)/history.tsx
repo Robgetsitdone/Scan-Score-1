@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, memo } from "react";
 import {
   View,
   Text,
@@ -28,7 +28,12 @@ function getScoreColor(score: number): string {
   return Colors.light.scoreAvoid;
 }
 
-function WeeklyTracker({ stats }: { stats: WeeklyStats[] }) {
+// Performance: Memoized separator component to avoid re-creation on every render
+const ItemSeparator = memo(() => <View style={{ height: 8 }} />);
+ItemSeparator.displayName = "ItemSeparator";
+
+// Performance: Memoized WeeklyTracker to prevent unnecessary re-renders
+const WeeklyTracker = memo(function WeeklyTracker({ stats }: { stats: WeeklyStats[] }) {
   if (stats.length === 0) return null;
 
   const current = stats[0];
@@ -96,7 +101,7 @@ function WeeklyTracker({ stats }: { stats: WeeklyStats[] }) {
       </View>
     </View>
   );
-}
+});
 
 type FilterMode = "all" | "favorites";
 
@@ -265,7 +270,8 @@ export default function HistoryScreen() {
           filteredHistory.length === 0 && styles.emptyList,
           { paddingBottom: Platform.OS === "web" ? 34 + 100 : insets.bottom + 100 },
         ]}
-        ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+        // Performance: Use memoized separator component
+        ItemSeparatorComponent={ItemSeparator}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -274,6 +280,12 @@ export default function HistoryScreen() {
           />
         }
         scrollEnabled={filteredHistory.length > 0}
+        // Performance: FlatList optimizations
+        removeClippedSubviews={Platform.OS !== "web"}
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
+        windowSize={5}
+        initialNumToRender={10}
         ListHeaderComponent={
           filter === "all" && weeklyStats.length > 0 ? (
             <View style={{ marginBottom: 12 }}>
