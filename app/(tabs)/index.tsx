@@ -21,6 +21,7 @@ import Animated, {
   withSequence,
   Easing,
 } from "react-native-reanimated";
+import { CameraView, useCameraPermissions } from "expo-camera";
 import Colors from "@/constants/colors";
 import { ScanResult } from "@/lib/types";
 import { saveScanResult } from "@/lib/storage";
@@ -28,7 +29,7 @@ import { getPreferences } from "@/lib/storage";
 import { apiRequest } from "@/lib/query-client";
 import ScanResultView from "@/components/ScanResultView";
 
-type ScanState = "idle" | "loading" | "result" | "error";
+type ScanState = "idle" | "loading" | "result" | "error" | "barcode";
 
 export default function ScanScreen() {
   const insets = useSafeAreaInsets();
@@ -36,6 +37,8 @@ export default function ScanScreen() {
   const [result, setResult] = useState<ScanResult | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const pulseAnim = useSharedValue(1);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const barcodeScannedRef = useRef(false);
 
   const startPulse = useCallback(() => {
     pulseAnim.value = withRepeat(
@@ -172,7 +175,141 @@ export default function ScanScreen() {
     setScanState("idle");
     setResult(null);
     setErrorMsg("");
+    barcodeScannedRef.current = false;
   }, []);
+
+  const analyzeBarcode = useCallback(async (barcode: string) => {
+    setScanState("loading");
+    startPulse();
+    try {
+      const prefs = await getPreferences();
+      const response = await apiRequest("POST", "/api/analyze-barcode", {
+        barcode,
+        preferences: prefs,
+      });
+
+      const data = await response.json();
+
+      if (data.error === "not_found") {
+        setErrorMsg(data.message || "Product not found. Try taking a photo of the label instead.");
+        setScanState("error");
+        stopPulse();
+        return;
+      }
+
+      if (data.error) {
+        setErrorMsg(data.message || "Analysis failed. Please try again.");
+        setScanState("error");
+        stopPulse();
+        return;
+      }
+
+      const scanResult: ScanResult = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        productName: data.productName || "Unknown Product",
+        brand: data.brand || "",
+        category: data.category || "",
+        score: data.score || 50,
+        tier: data.tier || "Treat / very infrequent",
+        breakdown: data.breakdown || {
+          additivesPenalty: 0,
+          nutritionPenalty: 0,
+          processingPenalty: 0,
+          greenBonus: 0,
+        },
+        flags: data.flags || [],
+        alternatives: data.alternatives || [],
+        ingredientsRaw: data.ingredientsRaw || "",
+        scanDate: new Date().toISOString(),
+      };
+
+      await saveScanResult(scanResult);
+      setResult(scanResult);
+      setScanState("result");
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "Something went wrong. Please try again.");
+      setScanState("error");
+    }
+    stopPulse();
+  }, []);
+
+  const openBarcodeScanner = useCallback(async () => {
+    if (Platform.OS === "web") {
+      Alert.alert(
+        "Not Available",
+        "Barcode scanning requires a mobile device. Please use the Expo Go app on your phone.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+
+    const permResult = await requestCameraPermission();
+    if (!permResult.granted) {
+      Alert.alert(
+        "Camera Access Needed",
+        "Please allow camera access to scan barcodes.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+
+    barcodeScannedRef.current = false;
+    setScanState("barcode");
+  }, [requestCameraPermission]);
+
+  const handleBarcodeScanned = useCallback(
+    (result: { data: string }) => {
+      if (barcodeScannedRef.current) return;
+      barcodeScannedRef.current = true;
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      analyzeBarcode(result.data);
+    },
+    [analyzeBarcode]
+  );
+
+  if (scanState === "barcode") {
+    return (
+      <View style={styles.barcodeContainer}>
+        <CameraView
+          style={StyleSheet.absoluteFill}
+          facing="back"
+          onBarcodeScanned={handleBarcodeScanned}
+          barcodeScannerSettings={{ barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e"] }}
+        />
+        <View style={styles.barcodeOverlay}>
+          <View style={styles.barcodeOverlayTop} />
+          <View style={styles.barcodeOverlayMiddle}>
+            <View style={styles.barcodeOverlaySide} />
+            <View style={styles.barcodeScanGuide} />
+            <View style={styles.barcodeOverlaySide} />
+          </View>
+          <View style={styles.barcodeOverlayBottom}>
+            <Text style={styles.barcodeScanText}>
+              Point at a barcode to scan
+            </Text>
+          </View>
+        </View>
+        <Pressable
+          onPress={resetScan}
+          style={[
+            styles.barcodeCloseBtn,
+            { top: Platform.OS === "web" ? 67 + 16 : insets.top + 16 },
+          ]}
+        >
+          <Ionicons name="close" size={28} color="#fff" />
+        </Pressable>
+      </View>
+    );
+  }
 
   if (scanState === "result" && result) {
     return <ScanResultView result={result} onScanAgain={resetScan} />;
@@ -233,6 +370,20 @@ export default function ScanScreen() {
               >
                 <Ionicons name="images" size={20} color={Colors.light.tint} />
                 <Text style={styles.secondaryBtnText}>Choose from Gallery</Text>
+              </Pressable>
+
+              <Pressable
+                onPress={openBarcodeScanner}
+                style={({ pressed }) => [
+                  styles.secondaryBtn,
+                  {
+                    opacity: pressed ? 0.9 : 1,
+                    transform: [{ scale: pressed ? 0.97 : 1 }],
+                  },
+                ]}
+              >
+                <MaterialCommunityIcons name="barcode-scan" size={20} color={Colors.light.tint} />
+                <Text style={styles.secondaryBtnText}>Scan Barcode</Text>
               </Pressable>
             </View>
 
@@ -446,5 +597,52 @@ const styles = StyleSheet.create({
     textAlign: "center" as const,
     lineHeight: 20,
     paddingHorizontal: 16,
+  },
+  barcodeContainer: {
+    flex: 1,
+    backgroundColor: "#000",
+  },
+  barcodeOverlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  barcodeOverlayTop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+  },
+  barcodeOverlayMiddle: {
+    flexDirection: "row" as const,
+    height: 200,
+  },
+  barcodeOverlaySide: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+  },
+  barcodeScanGuide: {
+    width: 280,
+    height: 200,
+    borderWidth: 2,
+    borderColor: "#fff",
+    borderRadius: 16,
+  },
+  barcodeOverlayBottom: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center" as const,
+    paddingTop: 32,
+  },
+  barcodeScanText: {
+    fontFamily: "DMSans_500Medium",
+    fontSize: 16,
+    color: "#fff",
+  },
+  barcodeCloseBtn: {
+    position: "absolute" as const,
+    left: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
   },
 });
