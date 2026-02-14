@@ -16,10 +16,12 @@ import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { ScanResult } from "@/lib/types";
 import { toggleFavorite, setComparisonSelection } from "@/lib/storage";
+import { getRelevantCategories } from "@/lib/ingredient-education";
 import ScoreCircle from "./ScoreCircle";
 import IngredientTag from "./IngredientTag";
 import AlternativeCard from "./AlternativeCard";
 import BreakdownBar from "./BreakdownBar";
+import EducationCard from "./EducationCard";
 
 interface ScanResultViewProps {
   result: ScanResult;
@@ -54,6 +56,11 @@ export default function ScanResultView({
       else if (flag.level === "green") green.push(flag);
     }
     return { redFlags: red, yellowFlags: yellow, greenFlags: green };
+  }, [result.flags]);
+
+  const educationCategories = useMemo(() => {
+    const allFlagTerms = result.flags.map((f) => f.term);
+    return getRelevantCategories(allFlagTerms);
   }, [result.flags]);
 
   const handleToggleFavorite = useCallback(async () => {
@@ -195,6 +202,26 @@ export default function ScanResultView({
             <View style={styles.tagGrid}>
               {greenFlags.map((flag, i) => (
                 <IngredientTag key={`green-${i}`} flag={flag} />
+              ))}
+            </View>
+          </View>
+        )}
+
+        {educationCategories.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Ionicons name="school-outline" size={18} color={Colors.light.tint} />
+              <Text style={[styles.sectionTitle, { color: Colors.light.tint }]}>
+                Learn More
+              </Text>
+            </View>
+            <View style={styles.eduList}>
+              {educationCategories.map((ec) => (
+                <EducationCard
+                  key={ec.category.id}
+                  category={ec.category}
+                  matchedIngredients={ec.matchedIngredients}
+                />
               ))}
             </View>
           </View>
@@ -350,6 +377,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.light.textSecondary,
     lineHeight: 19,
+  },
+  eduList: {
+    gap: 10,
   },
   altSection: {
     gap: 12,
