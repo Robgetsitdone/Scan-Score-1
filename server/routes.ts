@@ -131,6 +131,32 @@ const RESPONSE_FORMAT = `{
   ]
 }`;
 
+async function searchProductImage(productName: string, brand?: string): Promise<string | null> {
+  try {
+    const query = brand ? `${productName} ${brand}` : productName;
+    const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=1&fields=image_front_small_url,image_front_url`;
+    const response = await fetchWithTimeout(url, 5000);
+    const data = await response.json();
+    if (data.products && data.products.length > 0) {
+      return data.products[0].image_front_small_url || data.products[0].image_front_url || null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function enrichAlternativesWithImages(alternatives: any[]): Promise<any[]> {
+  if (!alternatives || alternatives.length === 0) return alternatives;
+  const enriched = await Promise.all(
+    alternatives.map(async (alt: any) => {
+      const imageUrl = await searchProductImage(alt.name, alt.brand);
+      return { ...alt, imageUrl: imageUrl || undefined };
+    })
+  );
+  return enriched;
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/analyze", async (req: Request, res: Response) => {
@@ -198,6 +224,9 @@ If you cannot read the label clearly, still provide your best analysis. If the i
       // Ensure macroPenalty exists for backward compatibility
       if (result.breakdown && result.breakdown.macroPenalty === undefined) {
         result.breakdown.macroPenalty = 0;
+      }
+      if (result.alternatives && result.alternatives.length > 0) {
+        result.alternatives = await enrichAlternativesWithImages(result.alternatives);
       }
       res.json(result);
     } catch (error: unknown) {
@@ -303,6 +332,9 @@ ${RESPONSE_FORMAT}`;
       }
       // Include nutrition data in response
       result.nutrition = nutrition;
+      if (result.alternatives && result.alternatives.length > 0) {
+        result.alternatives = await enrichAlternativesWithImages(result.alternatives);
+      }
 
       res.json(result);
     } catch (error: unknown) {

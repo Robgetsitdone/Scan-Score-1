@@ -36,6 +36,7 @@ export interface Alternative {
   tier: ScoreTier;
   keyDifferences: string[];
   whyBetter: string;
+  imageUrl?: string;
 }
 
 // ============ User Preferences ============
