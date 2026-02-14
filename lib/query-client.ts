@@ -2,19 +2,27 @@ import { fetch } from "expo/fetch";
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 /**
- * Gets the base URL for the Express API server (e.g., "http://localhost:3000")
- * @returns {string} The API base URL
+ * Gets the base URL for the Express API server.
+ * Uses EXPO_PUBLIC_API_URL for native builds (set in eas.json),
+ * falls back to EXPO_PUBLIC_DOMAIN for Replit dev environment.
  */
 export function getApiUrl(): string {
-  let host = process.env.EXPO_PUBLIC_DOMAIN;
-
-  if (!host) {
-    throw new Error("EXPO_PUBLIC_DOMAIN is not set");
+  // Production/preview: full URL set in eas.json env
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL;
+  if (apiUrl) {
+    return apiUrl.endsWith("/") ? apiUrl : `${apiUrl}/`;
   }
 
-  let url = new URL(`https://${host}`);
+  // Development: Replit domain-based URL
+  const host = process.env.EXPO_PUBLIC_DOMAIN;
+  if (host) {
+    const url = new URL(`https://${host}`);
+    return url.href;
+  }
 
-  return url.href;
+  throw new Error(
+    "No API URL configured. Set EXPO_PUBLIC_API_URL or EXPO_PUBLIC_DOMAIN."
+  );
 }
 
 async function throwIfResNotOk(res: Response) {

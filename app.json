@@ -15,15 +15,33 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.scanandscore",
+      "bundleIdentifier": "com.robgetsitdone.scorethelabel",
       "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "Score the Label needs camera access to scan food labels and barcodes so you can analyze ingredients.",
+        "NSPhotoLibraryUsageDescription": "Score the Label needs photo library access so you can select food label images to analyze.",
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+          }
+        ],
+        "NSPrivacyCollectedDataTypes": [
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypePhotosOrVideos",
+            "NSPrivacyCollectedDataTypeLinked": false,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": ["NSPrivacyCollectedDataTypePurposeAppFunctionality"]
+          }
+        ],
+        "NSPrivacyTracking": false
       }
     },
     "android": {
-      "package": "com.scanandscore",
+      "package": "com.robgetsitdone.scorethelabel",
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#F8F9FA",
@@ -39,7 +57,7 @@
       [
         "expo-router",
         {
-          "origin": "https://replit.com/"
+          "origin": "https://scorethelabel.com"
         }
       ],
       "expo-font",

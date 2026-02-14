@@ -33,6 +33,10 @@ function setupCors(app: express.Application) {
 
     const origin = req.header("origin");
 
+    // Native mobile apps send requests without an Origin header.
+    // Allow these requests through for the iOS/Android app.
+    const isNativeApp = !origin;
+
     // Security: Only allow specific localhost ports, not any port
     let isAllowedLocalhost = false;
     if (origin) {
@@ -53,6 +57,14 @@ function setupCors(app: express.Application) {
       );
       res.header("Access-Control-Allow-Headers", "Content-Type");
       res.header("Access-Control-Allow-Credentials", "true");
+    } else if (isNativeApp) {
+      // Native mobile requests have no origin - allow them
+      res.header("Access-Control-Allow-Origin", "*");
+      res.header(
+        "Access-Control-Allow-Methods",
+        "GET, POST, PUT, DELETE, OPTIONS",
+      );
+      res.header("Access-Control-Allow-Headers", "Content-Type");
     }
 
     // Security: Add security headers

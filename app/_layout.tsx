@@ -13,6 +13,7 @@ import {
 } from "@expo-google-fonts/dm-sans";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { queryClient } from "@/lib/query-client";
+import { seedDemoData } from "@/lib/demo-seed";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -34,7 +35,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (fontsLoaded) {
-      SplashScreen.hideAsync();
+      seedDemoData().then(() => SplashScreen.hideAsync());
     }
   }, [fontsLoaded]);
 
