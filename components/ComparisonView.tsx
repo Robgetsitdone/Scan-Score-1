@@ -43,7 +43,7 @@ export default function ComparisonView({ result, onCompareAgain }: ComparisonVie
     message += `${result.product2.productName}: ${result.product2.score}/100\n\n`;
     message += `Winner: ${winnerName}\n`;
     message += `${result.recommendation}\n\n`;
-    message += `Compared with Scan & Score`;
+    message += `Compared with Score the Label`;
 
     try {
       await Share.share({ message });

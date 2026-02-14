@@ -80,7 +80,7 @@ export default function ScanResultView({
     if (redList) message += `\nAvoid: ${redList}`;
     if (yellowList) message += `\nCaution: ${yellowList}`;
     if (greenList) message += `\nPositive: ${greenList}`;
-    message += `\n\nScanned with Scan & Score`;
+    message += `\n\nScanned with Score the Label`;
 
     try {
       await Share.share({ message });

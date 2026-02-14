@@ -301,7 +301,7 @@ export default function ScanScreen() {
                 source={require("@/assets/images/icon.png")}
                 style={styles.logoImage}
               />
-              <Text style={styles.heroTitle}>Scan & Score</Text>
+              <Text style={styles.heroTitle}>Score the Label</Text>
               <Text style={styles.heroTagline}>
                 Know what's really in your food.
               </Text>
@@ -481,20 +481,34 @@ export default function ScanScreen() {
             </View>
             <Text style={styles.errorTitle}>Couldn't analyze</Text>
             <Text style={styles.errorMessage}>{errorMsg}</Text>
-            <Pressable
-              onPress={resetScan}
-              style={({ pressed }) => [
-                styles.primaryBtn,
-                {
-                  marginTop: 12,
-                  opacity: pressed ? 0.9 : 1,
-                  transform: [{ scale: pressed ? 0.97 : 1 }],
-                },
-              ]}
-            >
-              <Ionicons name="refresh" size={20} color="#fff" />
-              <Text style={styles.primaryBtnText}>Try Again</Text>
-            </Pressable>
+            <View style={styles.errorActions}>
+              <Pressable
+                onPress={takePhoto}
+                style={({ pressed }) => [
+                  styles.primaryBtn,
+                  {
+                    opacity: pressed ? 0.9 : 1,
+                    transform: [{ scale: pressed ? 0.97 : 1 }],
+                  },
+                ]}
+              >
+                <Ionicons name="camera" size={20} color="#fff" />
+                <Text style={styles.primaryBtnText}>Take a Photo Instead</Text>
+              </Pressable>
+              <Pressable
+                onPress={resetScan}
+                style={({ pressed }) => [
+                  styles.secondaryBtn,
+                  {
+                    opacity: pressed ? 0.9 : 1,
+                    transform: [{ scale: pressed ? 0.97 : 1 }],
+                  },
+                ]}
+              >
+                <Ionicons name="arrow-back" size={20} color={Colors.light.tint} />
+                <Text style={styles.secondaryBtnText}>Back to Home</Text>
+              </Pressable>
+            </View>
           </View>
         )}
       </View>
@@ -687,6 +701,11 @@ const styles = StyleSheet.create({
     textAlign: "center" as const,
     lineHeight: 20,
     paddingHorizontal: 16,
+  },
+  errorActions: {
+    gap: 10,
+    alignSelf: "stretch" as const,
+    marginTop: 12,
   },
   barcodeContainer: {
     flex: 1,

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Scan & Score",
+    "name": "Score the Label",
     "slug": "scan-and-score",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -41,7 +41,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Scan & Score to access your camera to scan food labels and barcodes."
+          "cameraPermission": "Allow Score the Label to access your camera to scan food labels and barcodes."
         }
       ]
     ],

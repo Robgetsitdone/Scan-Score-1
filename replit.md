@@ -1,4 +1,4 @@
-# Scan & Score
+# Score the Label
 
 ## Overview
 A mobile food scanning app built with Expo (React Native). Point your camera at a food label, get instant AI-powered ingredient analysis with red/yellow/green flags, a health score out of 100, and cleaner alternative suggestions.
@@ -15,7 +15,7 @@ A mobile food scanning app built with Expo (React Native). Point your camera at 
 - `app/(tabs)/index.tsx` - Main scan screen (camera/gallery/barcode capture + results)
 - `app/(tabs)/history.tsx` - Past scans list with favorites filter and weekly score tracker
 - `app/(tabs)/preferences.tsx` - Ingredient avoidance toggles
-- `components/ScanResultView.tsx` - Full scan result display with share and favorite buttons
+- `components/ScanResultView.tsx` - Full scan result display with share, favorite, and back buttons
 - `components/ScoreCircle.tsx` - Animated score ring
 - `components/IngredientTag.tsx` - Red/yellow/green ingredient pills with tap-to-explain
 - `components/AlternativeCard.tsx` - Swap suggestion cards
@@ -35,15 +35,19 @@ A mobile food scanning app built with Expo (React Native). Point your camera at 
 - **Favorites**: Heart icon to save favorite scans, filter in History tab
 - **Weekly Tracker**: Average score, scan count, and bar chart trend visualization
 - **Preferences**: 8 ingredient avoidance toggles that affect scoring
+- **Navigation**: Prominent back button on scan results for easy return to home
 
 ## Recent Changes
+- 2026-02-14: Renamed app from "Scan & Score" to "Score the Label"
+- 2026-02-14: Improved barcode not-found error screen with "Take a Photo Instead" button
+- 2026-02-14: Added prominent back button (teal circle) to scan result view
 - 2026-02-13: Added barcode scanning via expo-camera + Open Food Facts API
 - 2026-02-13: Added share functionality (native share sheet with scan summary)
 - 2026-02-13: Added favorites system (heart icon, AsyncStorage, filter in History)
 - 2026-02-13: Added weekly score tracker (avg score, trend badge, bar chart)
 - 2026-02-13: Fixed image analysis: switched to GPT-4o-mini, added HEIC-to-JPEG conversion
 - 2026-02-13: Fixed body parser limit (25MB) for image uploads
-- 2026-02-12: Initial build of Scan & Score MVP
+- 2026-02-12: Initial build of Score the Label MVP
 
 ## User Preferences
 - No database — use AsyncStorage only for local persistence
