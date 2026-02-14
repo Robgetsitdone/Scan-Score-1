@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import React, { useState } from "react";
+import { View, Text, StyleSheet, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "@/constants/colors";
 import { Alternative } from "@/lib/types";
@@ -19,16 +19,25 @@ interface AlternativeCardProps {
 
 export default function AlternativeCard({ alternative }: AlternativeCardProps) {
   const scoreColor = getScoreColor(alternative.score);
+  const [imgError, setImgError] = useState(false);
+  const hasImage = !!alternative.imageUrl && !imgError;
+  const initial = alternative.name.charAt(0).toUpperCase();
 
   return (
     <View style={styles.card}>
-      <View style={styles.header}>
-        <View style={styles.nameSection}>
-          <Text style={styles.name} numberOfLines={2}>
-            {alternative.name}
-          </Text>
-          <Text style={styles.brand}>{alternative.brand}</Text>
-        </View>
+      <View style={styles.topRow}>
+        {hasImage ? (
+          <Image
+            source={{ uri: alternative.imageUrl }}
+            style={styles.productImage}
+            resizeMode="cover"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <View style={styles.placeholderImage}>
+            <Text style={styles.placeholderInitial}>{initial}</Text>
+          </View>
+        )}
         <View style={[styles.scoreBadge, { backgroundColor: scoreColor + "18" }]}>
           <Text style={[styles.scoreText, { color: scoreColor }]}>
             {alternative.score}
@@ -37,6 +46,13 @@ export default function AlternativeCard({ alternative }: AlternativeCardProps) {
             {alternative.tier}
           </Text>
         </View>
+      </View>
+
+      <View style={styles.nameSection}>
+        <Text style={styles.name} numberOfLines={2}>
+          {alternative.name}
+        </Text>
+        <Text style={styles.brand}>{alternative.brand}</Text>
       </View>
 
       <Text style={styles.whyBetter}>{alternative.whyBetter}</Text>
@@ -63,14 +79,32 @@ const styles = StyleSheet.create({
     borderColor: Colors.light.border,
     gap: 10,
   },
-  header: {
+  topRow: {
     flexDirection: "row" as const,
     justifyContent: "space-between" as const,
     alignItems: "flex-start" as const,
-    gap: 10,
+  },
+  productImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    backgroundColor: Colors.light.background,
+  },
+  placeholderImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    backgroundColor: Colors.light.tintLight,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  placeholderInitial: {
+    fontFamily: "DMSans_700Bold",
+    fontSize: 24,
+    color: Colors.light.tint,
   },
   nameSection: {
-    flex: 1,
+    gap: 2,
   },
   name: {
     fontFamily: "DMSans_600SemiBold",
@@ -82,7 +116,6 @@ const styles = StyleSheet.create({
     fontFamily: "DMSans_400Regular",
     fontSize: 12,
     color: Colors.light.textSecondary,
-    marginTop: 2,
   },
   scoreBadge: {
     alignItems: "center" as const,
