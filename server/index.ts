@@ -102,6 +102,8 @@ function setupRateLimiting(app: express.Application) {
 
   app.use("/api/analyze", analysisLimiter);
   app.use("/api/analyze-barcode", analysisLimiter);
+  app.use("/api/compare", analysisLimiter);
+  app.use("/api/generate-image", analysisLimiter);
   app.use("/api/conversations", generalLimiter);
 }
 

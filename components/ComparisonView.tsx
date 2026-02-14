@@ -47,7 +47,9 @@ export default function ComparisonView({ result, onCompareAgain }: ComparisonVie
 
     try {
       await Share.share({ message });
-    } catch (_) {}
+    } catch {
+      // Share was cancelled or failed - no action needed
+    }
   }, [result]);
 
   return (

@@ -39,3 +39,9 @@ yarn-error.*
 .vercel
 
 .env
+
+# EAS
+eas-build-*
+
+# Server build
+server_dist/

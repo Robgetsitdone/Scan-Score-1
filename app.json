@@ -15,10 +15,16 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.scanandscore"
+      "bundleIdentifier": "com.scanandscore",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Score the Label needs camera access to scan food labels and barcodes so you can analyze ingredients.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.scanandscore",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#F8F9FA",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -48,6 +54,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": ""
+      }
+    },
+    "owner": "robgetsitdone"
   }
 }

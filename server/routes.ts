@@ -220,7 +220,15 @@ If you cannot read the label clearly, still provide your best analysis. If the i
         cleaned = cleaned.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
       }
 
-      const result = JSON.parse(cleaned);
+      let result;
+      try {
+        result = JSON.parse(cleaned);
+      } catch {
+        return res.status(500).json({
+          error: "analysis_failed",
+          message: "Failed to parse AI response. Please try again.",
+        });
+      }
       // Ensure macroPenalty exists for backward compatibility
       if (result.breakdown && result.breakdown.macroPenalty === undefined) {
         result.breakdown.macroPenalty = 0;
@@ -262,6 +270,9 @@ If you cannot read the label clearly, still provide your best analysis. If the i
         `https://world.openfoodfacts.org/api/v2/product/${barcode}.json`,
         30000
       );
+      if (!offResponse.ok) {
+        return res.json({ error: "not_found", message: "Product not found in database. Try taking a photo of the label instead." });
+      }
       const offData = await offResponse.json();
 
       if (offData.status !== 1 || !offData.product) {
@@ -321,7 +332,15 @@ ${RESPONSE_FORMAT}`;
         cleaned = cleaned.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "");
       }
 
-      const result = JSON.parse(cleaned);
+      let result;
+      try {
+        result = JSON.parse(cleaned);
+      } catch {
+        return res.status(500).json({
+          error: "analysis_failed",
+          message: "Failed to parse AI response. Please try again.",
+        });
+      }
       result.productName = result.productName || productName;
       result.brand = result.brand || brand;
       result.category = result.category || category;

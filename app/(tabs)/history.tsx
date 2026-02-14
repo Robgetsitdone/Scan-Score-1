@@ -120,8 +120,12 @@ export default function HistoryScreen() {
   const weeklyStats = useMemo(() => getWeeklyStats(history), [history]);
 
   const loadHistory = useCallback(async () => {
-    const data = await getScanHistory();
-    setHistory(data);
+    try {
+      const data = await getScanHistory();
+      setHistory(data);
+    } catch {
+      // Keep existing data if load fails
+    }
   }, []);
 
   useFocusEffect(
@@ -144,13 +148,17 @@ export default function HistoryScreen() {
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            if (Platform.OS !== "web") {
-              Haptics.notificationAsync(
-                Haptics.NotificationFeedbackType.Warning
-              );
+            try {
+              if (Platform.OS !== "web") {
+                Haptics.notificationAsync(
+                  Haptics.NotificationFeedbackType.Warning
+                );
+              }
+              await deleteScanResult(item.id);
+              loadHistory();
+            } catch {
+              Alert.alert("Error", "Failed to delete. Please try again.");
             }
-            await deleteScanResult(item.id);
-            loadHistory();
           },
         },
       ]);
@@ -169,8 +177,12 @@ export default function HistoryScreen() {
           text: "Clear All",
           style: "destructive",
           onPress: async () => {
-            await clearScanHistory();
-            loadHistory();
+            try {
+              await clearScanHistory();
+              loadHistory();
+            } catch {
+              Alert.alert("Error", "Failed to clear history. Please try again.");
+            }
           },
         },
       ]

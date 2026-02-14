@@ -96,8 +96,12 @@ export default function PreferencesScreen() {
   useFocusEffect(
     useCallback(() => {
       (async () => {
-        const saved = await getPreferences();
-        setPrefs(saved);
+        try {
+          const saved = await getPreferences();
+          setPrefs(saved);
+        } catch {
+          // Fall back to defaults if storage fails
+        }
       })();
     }, [])
   );
@@ -106,7 +110,7 @@ export default function PreferencesScreen() {
     (key: keyof UserPreferences, value: boolean) => {
       setPrefs((prev) => {
         const next = { ...prev, [key]: value };
-        savePreferences(next);
+        savePreferences(next).catch(() => {});
         return next;
       });
     },

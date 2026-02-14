@@ -37,12 +37,16 @@ export default function ScanResultView({
   const [isFav, setIsFav] = useState(result.isFavorite ?? false);
 
   const handleCompare = useCallback(async () => {
-    if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      if (Platform.OS !== "web") {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+      // Pre-select this product for comparison
+      await setComparisonSelection({ product1: result, product2: null });
+      router.push("/compare");
+    } catch {
+      // Navigation or storage failed - no action needed
     }
-    // Pre-select this product for comparison
-    await setComparisonSelection({ product1: result, product2: null });
-    router.push("/compare");
   }, [result, router]);
 
   // Performance: Memoize flag filtering to avoid recalculation on every render
@@ -64,12 +68,15 @@ export default function ScanResultView({
   }, [result.flags]);
 
   const handleToggleFavorite = useCallback(async () => {
-    if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    try {
+      if (Platform.OS !== "web") {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
+      const newState = await toggleFavorite(result.id);
+      setIsFav(newState);
+    } catch {
+      // Silently fail - favorite state stays unchanged
     }
-    const newState = await toggleFavorite(result.id);
-    setIsFav(newState);
-    result.isFavorite = newState;
   }, [result.id]);
 
   const handleShare = useCallback(async () => {
@@ -91,7 +98,9 @@ export default function ScanResultView({
 
     try {
       await Share.share({ message });
-    } catch (_) {}
+    } catch {
+      // Share was cancelled or failed - no action needed
+    }
   }, [result, redFlags, yellowFlags, greenFlags]);
 
   return (

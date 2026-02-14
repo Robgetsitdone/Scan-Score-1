@@ -100,8 +100,8 @@ export default function ScanScreen() {
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || "Something went wrong. Please try again.");
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setScanState("error");
     }
     stopPulse();
@@ -194,8 +194,8 @@ export default function ScanScreen() {
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
-    } catch (err: any) {
-      setErrorMsg(err.message || "Something went wrong. Please try again.");
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setScanState("error");
     }
     stopPulse();
