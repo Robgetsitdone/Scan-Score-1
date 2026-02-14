@@ -21,8 +21,10 @@ A mobile food scanning app built with Expo (React Native). Point your camera at 
 - `components/AlternativeCard.tsx` - Swap suggestion cards
 - `components/BreakdownBar.tsx` - Score breakdown visualization
 - `components/HistoryItem.tsx` - History list item with score badge and favorite indicator
+- `components/EducationCard.tsx` - Tappable education cards with modal detail view
 - `lib/types.ts` - TypeScript types (ScanResult, WeeklyStats, etc.)
 - `lib/storage.ts` - AsyncStorage helpers (history, favorites, weekly stats, preferences)
+- `lib/ingredient-education.ts` - Education database with 10 categories, 53+ ingredients, and fuzzy matching
 - `server/routes.ts` - API endpoints for AI analysis (image + barcode)
 
 ## Features
@@ -35,9 +37,11 @@ A mobile food scanning app built with Expo (React Native). Point your camera at 
 - **Favorites**: Heart icon to save favorite scans, filter in History tab
 - **Weekly Tracker**: Average score, scan count, and bar chart trend visualization
 - **Preferences**: 8 ingredient avoidance toggles that affect scoring
+- **Education**: Ingredient education cards that surface relevant category info (artificial sweeteners, emulsifiers, preservatives, etc.) based on flagged ingredients, with detailed modal explanations and regulatory context
 - **Navigation**: Prominent back button on scan results for easy return to home
 
 ## Recent Changes
+- 2026-02-14: Added ingredient education system with 10 categories, 53+ ingredients, and tappable education cards in scan results
 - 2026-02-14: Renamed app from "Scan & Score" to "Score the Label"
 - 2026-02-14: Improved barcode not-found error screen with "Take a Photo Instead" button
 - 2026-02-14: Added prominent back button (teal circle) to scan result view
